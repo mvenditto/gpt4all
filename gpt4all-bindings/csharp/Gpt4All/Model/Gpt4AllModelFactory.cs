@@ -19,9 +19,9 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
 
         var loadedSuccesfully = NativeMethods.llmodel_loadModel(handle, modelPath);
 
-        if (loadedSuccesfully == false)
+        if (!loadedSuccesfully)
         {
-            throw new Exception($"Failed to load model: '{modelPath}'");
+            throw new ModelLoadException($"Failed to load model: '{modelPath}'");
         }
 
         var underlyingModel = LLModel.Create(handle, modelType_);
