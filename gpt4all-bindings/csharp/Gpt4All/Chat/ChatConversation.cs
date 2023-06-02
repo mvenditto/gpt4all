@@ -1,25 +1,29 @@
-﻿namespace Gpt4All.Chat;
+﻿using Gpt4All.Bindings;
+
+namespace Gpt4All.Chat;
 
 public class ChatConversation : IChatConversation
 {
-    private readonly List<ChatMessage> _messages;
-
     private int _incrementalMessageId;
 
     public Guid ConversationId { get; init; } = Guid.NewGuid();
 
     /// <inheritdoc/>
-    public IEnumerable<ChatMessage> Messages => _messages;
+    public ICollection<ChatMessage> Messages { get; set; }
+
+    /// <inheritdoc/>
+    public LLModelPromptContext Context { get; set; }
 
     public ChatConversation()
     {
-        _messages = new List<ChatMessage>();
+        Messages = new List<ChatMessage>();
+        Context = PredictRequestOptions.Chat.ToPromptContext();
     }
 
     /// <inheritdoc/>
     public void AddMessage(ChatRole authorRole, string content)
     {
-        _messages.Add(new ChatMessage(authorRole, content)
+        Messages.Add(new ChatMessage(authorRole, content)
         {
             MessageId = _incrementalMessageId++
         });

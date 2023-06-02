@@ -1,13 +1,17 @@
-﻿namespace Gpt4All.Chat;
+﻿using Gpt4All.Bindings;
+
+namespace Gpt4All.Chat;
 
 public interface IChatConversation
 {
     Guid ConversationId { get; }
 
+    LLModelPromptContext Context { get; set; }
+
     /// <summary>
     /// The messages in this conversation
     /// </summary>
-    IEnumerable<ChatMessage> Messages { get; }
+    ICollection<ChatMessage> Messages { get; set; }
 
     /// <summary>
     /// Add a message to this conversation
