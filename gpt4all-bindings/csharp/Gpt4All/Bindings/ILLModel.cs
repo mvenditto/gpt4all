@@ -17,7 +17,7 @@ public interface ILLModel : IDisposable
 
     bool Load(string modelPath);
 
-    void Prompt(
+    PromptResult Prompt(
         string text,
         LLModelPromptContext context,
         Func<ModelPromptEventArgs, bool>? promptCallback = null,

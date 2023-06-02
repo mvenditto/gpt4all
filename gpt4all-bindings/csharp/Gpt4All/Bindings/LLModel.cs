@@ -74,7 +74,7 @@ public class LLModel : ILLModel
     /// <param name="responseCallback">A callback function for handling the generated response</param>
     /// <param name="recalculateCallback">A callback function for handling recalculation requests</param>
     /// <param name="cancellationToken"></param>
-    public void Prompt(
+    public PromptResult Prompt(
         string text,
         LLModelPromptContext context,
         Func<ModelPromptEventArgs, bool>? promptCallback = null,
@@ -89,11 +89,15 @@ public class LLModel : ILLModel
 
         _logger.LogInformation("Prompt input='{Prompt}' ctx={Context}", text, context.Dump());
 
+        var promptTokens = 0;
+        var completionTokens = 0;
+
         NativeMethods.llmodel_prompt(
             _handle,
             text,
             (tokenId) =>
             {
+                promptTokens++;
                 if (cancellationToken.IsCancellationRequested) return false;
                 if (promptCallback == null) return true;
                 var args = new ModelPromptEventArgs(tokenId);
@@ -101,6 +105,8 @@ public class LLModel : ILLModel
             },
             (tokenId, response) =>
             {
+                if (tokenId >= 0) completionTokens++;
+
                 if (cancellationToken.IsCancellationRequested)
                 {
                     _logger.LogDebug("ResponseCallback evt=CancellationRequested");
@@ -120,6 +126,12 @@ public class LLModel : ILLModel
             },
             ref context.UnderlyingContext
         );
+
+        return new PromptResult
+        {
+            PromptTokens = promptTokens,
+            CompletionTokens = completionTokens
+        };
     }
 
     /// <summary>
