@@ -6,6 +6,9 @@ public interface IChatConversation
 {
     Guid ConversationId { get; }
 
+    /// <summary>
+    /// The context of this chat
+    /// </summary>
     LLModelPromptContext Context { get; set; }
 
     /// <summary>
