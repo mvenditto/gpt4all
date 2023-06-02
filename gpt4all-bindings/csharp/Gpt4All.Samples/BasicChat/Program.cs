@@ -49,8 +49,9 @@ async Task<ITextPredictionStreamingResult> GeneratedResponse(string userInput)
     // ask the model to produce an "assistant" message
     var message = await model.GetStreamingMessageAsync(chat);
 
-    // stream the predicted tokens
     Console.WriteLine("\n[Assistant]:");
+
+    // stream the predicted tokens
     await foreach (var token in message.GetPredictionStreamingAsync())
     {
         Console.Write(token);
