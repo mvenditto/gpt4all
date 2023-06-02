@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gpt4All.Samples", "Gpt4All.Samples\Gpt4All.Samples.csproj", "{59864AE8-E45D-42F7-A7C0-1308EF185F39}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicTextCompletion", "Gpt4All.Samples\BasicTextCompletion\BasicTextCompletion.csproj", "{59864AE8-E45D-42F7-A7C0-1308EF185F39}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DA396C11-CEAD-4368-8234-FB12255A30D2}"
 	ProjectSection(SolutionItems) = preProject
@@ -17,7 +17,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gpt4All", "Gpt4All\Gpt4All.csproj", "{6015C62B-2008-426B-A334-740D6F1FE38B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gpt4All.Tests", "Gpt4All.Tests\Gpt4All.Tests.csproj", "{33A72341-52C1-4EAE-878B-A98BC77F686A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gpt4All.Tests", "Gpt4All.Tests\Gpt4All.Tests.csproj", "{33A72341-52C1-4EAE-878B-A98BC77F686A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{BCC2FF73-BD65-479E-A8B9-978B61F32E3D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,7 +43,10 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{59864AE8-E45D-42F7-A7C0-1308EF185F39} = {BCC2FF73-BD65-479E-A8B9-978B61F32E3D}
+	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {17632027-F4C2-4903-B88F-310CE3DE386B}
+		SolutionGuid = {D97723E6-949A-4BC3-BAB2-C29C32198E95}
 	EndGlobalSection
 EndGlobal
