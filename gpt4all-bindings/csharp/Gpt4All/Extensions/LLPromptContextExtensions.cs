@@ -1,4 +1,5 @@
-﻿using Gpt4All.Bindings;
+﻿using System;
+using Gpt4All.Bindings;
 
 namespace Gpt4All;
 
@@ -22,5 +23,16 @@ internal static class LLPromptContextExtensions
             repeat_last_n = {ctx.repeat_last_n}
             context_erase = {ctx.context_erase}
         }}";
+    }
+
+    public static void ApplyOptions(this LLModelPromptContext context, PredictRequestOptions opts)
+    {
+        context.TokensToPredict = opts.TokensToPredict;
+        context.TopK = opts.TopK;
+        context.TopP = opts.TopP;
+        context.Temperature = opts.Temperature;
+        context.Batches = opts.Batches;
+        context.RepeatLastN = opts.RepeatLastN;
+        context.RepeatPenalty = opts.RepeatPenalty;
     }
 }
