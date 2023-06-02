@@ -39,7 +39,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
 
         if (loadedSuccessfully == false)
         {
-            throw new Exception($"Failed to load model: '{modelPath}'");
+            throw new ModelLoadException($"Failed to load model: '{modelPath}'");
         }
 
         var logger = _loggerFactory.CreateLogger<LLModel>();

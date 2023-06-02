@@ -27,4 +27,17 @@ public record PredictRequestOptions
     public float ContextErase { get; init; } = 0.5f;
 
     public static readonly PredictRequestOptions Defaults = new();
+
+    public static readonly PredictRequestOptions Chat = Defaults with
+    {
+        PastConversationTokensNum = 0,
+        Temperature = 0.28f,
+        TokensToPredict = 200,
+        ContextSize = 0,
+        ContextErase = 0.75f,
+        TopP = 0.95f,
+        Batches = 9,
+        RepeatPenalty = 1.10f,
+        RepeatLastN = 64
+    };
 }
