@@ -51,6 +51,20 @@ static inline QJsonObject modelToJson(const ModelInfo &info)
     return model;
 }
 
+static inline QJsonObject resultToJson(const ResultInfo &info)
+{
+    QJsonObject result;
+    result.insert("file", info.file);
+    result.insert("title", info.title);
+    result.insert("author", info.author);
+    result.insert("date", info.date);
+    result.insert("text", info.text);
+    result.insert("page", info.page);
+    result.insert("from", info.from);
+    result.insert("to", info.to);
+    return result;
+}
+
 Server::Server(Chat *chat)
     : ChatLLM(chat, true /*isServer*/)
     , m_chat(chat)
@@ -112,7 +126,7 @@ void Server::start()
     );
 
     m_server->route("/v1/completions", QHttpServerRequest::Method::Post,
-        [=](const QHttpServerRequest &request) {
+        [this](const QHttpServerRequest &request) {
             if (!LLM::globalInstance()->serverEnabled())
                 return QHttpServerResponse(QHttpServerResponder::StatusCode::Unauthorized);
             return handleCompletionRequest(request, false);
@@ -120,7 +134,7 @@ void Server::start()
     );
 
     m_server->route("/v1/chat/completions", QHttpServerRequest::Method::Post,
-        [=](const QHttpServerRequest &request) {
+        [this](const QHttpServerRequest &request) {
             if (!LLM::globalInstance()->serverEnabled())
                 return QHttpServerResponse(QHttpServerResponder::StatusCode::Unauthorized);
             return handleCompletionRequest(request, true);
@@ -286,7 +300,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
     }
 
     // don't remember any context
-    resetContextProtected();
+    resetContext();
 
     QSettings settings;
     settings.sync();
@@ -298,7 +312,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
 
     int promptTokens = 0;
     int responseTokens = 0;
-    QList<QString> responses;
+    QList<QPair<QString, QList<ResultInfo>>> responses;
     for (int i = 0; i < n; ++i) {
         if (!prompt(actualPrompt,
             promptTemplate,
@@ -317,7 +331,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
         QString echoedPrompt = actualPrompt;
         if (!echoedPrompt.endsWith("\n"))
             echoedPrompt += "\n";
-        responses.append((echo ? QString("%1\n").arg(actualPrompt) : QString()) + response());
+        responses.append(qMakePair((echo ? QString("%1\n").arg(actualPrompt) : QString()) + response(), m_databaseResults));
         if (!promptTokens)
             promptTokens += m_promptTokens;
         responseTokens += m_promptResponseTokens - m_promptTokens;
@@ -332,15 +346,43 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
     responseObject.insert("model", modelName());
 
     QJsonArray choices;
-    int index = 0;
-    for (QString r : responses) {
-        QJsonObject choice;
-        choice.insert("text", r);
-        choice.insert("index", index++);
-        choice.insert("logprobs", QJsonValue::Null); // We don't support
-        choice.insert("finish_reason", responseTokens == max_tokens ? "length" : "stop");
-        choices.append(choice);
+
+    if (isChat) {
+        int index = 0;
+        for (const auto &r : responses) {
+            QString result = r.first;
+            QList<ResultInfo> infos = r.second;
+            QJsonObject choice;
+            choice.insert("index", index++);
+            choice.insert("finish_reason", responseTokens == max_tokens ? "length" : "stop");
+            QJsonObject message;
+            message.insert("role", "assistant");
+            message.insert("content", result);
+            choice.insert("message", message);
+            QJsonArray references;
+            for (const auto &ref : infos)
+                references.append(resultToJson(ref));
+            choice.insert("references", references);
+            choices.append(choice);
+        }
+    } else {
+        int index = 0;
+        for (const auto &r : responses) {
+            QString result = r.first;
+            QList<ResultInfo> infos = r.second;
+            QJsonObject choice;
+            choice.insert("text", result);
+            choice.insert("index", index++);
+            choice.insert("logprobs", QJsonValue::Null); // We don't support
+            choice.insert("finish_reason", responseTokens == max_tokens ? "length" : "stop");
+            QJsonArray references;
+            for (const auto &ref : infos)
+                references.append(resultToJson(ref));
+            choice.insert("references", references);
+            choices.append(choice);
+        }
     }
+
     responseObject.insert("choices", choices);
 
     QJsonObject usage;

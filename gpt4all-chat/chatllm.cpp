@@ -2,9 +2,7 @@
 #include "chat.h"
 #include "download.h"
 #include "network.h"
-#include "../gpt4all-backend/gptj.h"
-#include "../gpt4all-backend/llamamodel.h"
-#include "../gpt4all-backend/mpt.h"
+#include "../gpt4all-backend/llmodel.h"
 #include "chatgpt.h"
 
 #include <QCoreApplication>
@@ -93,9 +91,15 @@ ChatLLM::ChatLLM(Chat *parent, bool isServer)
     moveToThread(&m_llmThread);
     connect(this, &ChatLLM::sendStartup, Network::globalInstance(), &Network::sendStartup);
     connect(this, &ChatLLM::sendModelLoaded, Network::globalInstance(), &Network::sendModelLoaded);
-    connect(this, &ChatLLM::shouldBeLoadedChanged, this, &ChatLLM::handleShouldBeLoadedChanged, Qt::QueuedConnection);
+    connect(this, &ChatLLM::shouldBeLoadedChanged, this, &ChatLLM::handleShouldBeLoadedChanged,
+        Qt::QueuedConnection); // explicitly queued
     connect(m_chat, &Chat::idChanged, this, &ChatLLM::handleChatIdChanged);
     connect(&m_llmThread, &QThread::started, this, &ChatLLM::threadStarted);
+
+    // The following are blocking operations and will block the llm thread
+    connect(this, &ChatLLM::requestRetrieveFromDB, LocalDocs::globalInstance()->database(), &Database::retrieveFromDB,
+        Qt::BlockingQueuedConnection);
+
     m_llmThread.setObjectName(m_chat->id());
     m_llmThread.start();
 }
@@ -146,7 +150,7 @@ bool ChatLLM::loadModel(const QString &modelName)
     // We have a live model, but it isn't the one we want
     bool alreadyAcquired = isModelLoaded();
     if (alreadyAcquired) {
-        resetContextProtected();
+        resetContext();
 #if defined(DEBUG_MODEL_LOADING)
         qDebug() << "already acquired model deleted" << m_chat->id() << m_modelInfo.model;
 #endif
@@ -215,25 +219,15 @@ bool ChatLLM::loadModel(const QString &modelName)
             model->setAPIKey(apiKey);
             m_modelInfo.model = model;
         } else {
-            auto fin = std::ifstream(filePath.toStdString(), std::ios::binary);
-            uint32_t magic;
-            fin.read((char *) &magic, sizeof(magic));
-            fin.seekg(0);
-            fin.close();
-            const bool isGPTJ = magic == 0x67676d6c;
-            const bool isMPT = magic == 0x67676d6d;
-            if (isGPTJ) {
-                m_modelType = LLModelType::GPTJ_;
-                m_modelInfo.model = new GPTJ;
+            m_modelInfo.model = LLModel::construct(filePath.toStdString());
+            if (m_modelInfo.model) {
                 m_modelInfo.model->loadModel(filePath.toStdString());
-            } else if (isMPT) {
-                m_modelType = LLModelType::MPT_;
-                m_modelInfo.model = new MPT;
-                m_modelInfo.model->loadModel(filePath.toStdString());
-            } else {
-                m_modelType = LLModelType::LLAMA_;
-                m_modelInfo.model = new LLamaModel;
-                m_modelInfo.model->loadModel(filePath.toStdString());
+                switch (m_modelInfo.model->implementation().modelType[0]) {
+                case 'L': m_modelType = LLModelType::LLAMA_; break;
+                case 'G': m_modelType = LLModelType::GPTJ_; break;
+                case 'M': m_modelType = LLModelType::MPT_; break;
+                default: delete std::exchange(m_modelInfo.model, nullptr);
+                }
             }
         }
 #if defined(DEBUG_MODEL_LOADING)
@@ -302,13 +296,11 @@ void ChatLLM::resetResponse()
 
 void ChatLLM::resetContext()
 {
-    resetContextProtected();
-    emit sendResetContext();
-}
-
-void ChatLLM::resetContextProtected()
-{
     regenerateResponse();
+    if (m_isChatGPT && isModelLoaded()) {
+        ChatGPT *chatGPT = static_cast<ChatGPT*>(m_modelInfo.model);
+        chatGPT->setContext(QList<QString>());
+    }
     m_ctx = LLModel::PromptContext();
 }
 
@@ -404,7 +396,19 @@ bool ChatLLM::prompt(const QString &prompt, const QString &prompt_template, int3
     if (!isModelLoaded())
         return false;
 
-    QString instructPrompt = prompt_template.arg(prompt);
+    m_databaseResults.clear();
+    const int retrievalSize = LocalDocs::globalInstance()->retrievalSize();
+    emit requestRetrieveFromDB(m_chat->collectionList(), prompt, retrievalSize, &m_databaseResults); // blocks
+
+    // Augment the prompt template with the results if any
+    QList<QString> augmentedTemplate;
+    if (!m_databaseResults.isEmpty())
+        augmentedTemplate.append("### Context:");
+    for (const ResultInfo &info : m_databaseResults)
+        augmentedTemplate.append(info.text);
+    augmentedTemplate.append(prompt_template);
+
+    QString instructPrompt = augmentedTemplate.join("\n").arg(prompt);
 
     m_stopGenerating = false;
     auto promptFunc = std::bind(&ChatLLM::handlePrompt, this, std::placeholders::_1);

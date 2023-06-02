@@ -1,3 +1,6 @@
+#ifndef GPTJ_H_I_KNOW_WHAT_I_AM_DOING_WHEN_INCLUDING_THIS_FILE
+#error This file is NOT meant to be included outside of gptj.cpp. Doing so is DANGEROUS. Be sure to know what you are doing before proceeding to #define GPTJ_H_I_KNOW_WHAT_I_AM_DOING_WHEN_INCLUDING_THIS_FILE
+#endif
 #ifndef GPTJ_H
 #define GPTJ_H
 
@@ -6,7 +9,7 @@
 #include <vector>
 #include "llmodel.h"
 
-class GPTJPrivate;
+struct GPTJPrivate;
 class GPTJ : public LLModel {
 public:
     GPTJ();
@@ -22,12 +25,9 @@ public:
         std::function<bool(int32_t, const std::string&)> responseCallback,
         std::function<bool(bool)> recalculateCallback,
         PromptContext &ctx) override;
+    bool evalTokens(PromptContext &ctx, const std::vector<int32_t> &tokens) override;
     void setThreadCount(int32_t n_threads) override;
     int32_t threadCount() const override;
-
-protected:
-    void recalculateContext(PromptContext &promptCtx,
-        std::function<bool(bool)> recalculate) override;
 
 private:
     GPTJPrivate *d_ptr;

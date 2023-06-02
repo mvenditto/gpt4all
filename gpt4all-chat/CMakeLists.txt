@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if(APPLE)
   option(BUILD_UNIVERSAL "Build a Universal binary on macOS" OFF)
   if(BUILD_UNIVERSAL)
@@ -14,7 +17,7 @@ endif()
 
 set(APP_VERSION_MAJOR 2)
 set(APP_VERSION_MINOR 4)
-set(APP_VERSION_PATCH 3)
+set(APP_VERSION_PATCH 5)
 set(APP_VERSION "${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_VERSION_PATCH}")
 
 # Include the binary directory for the generated header file
@@ -52,9 +55,9 @@ get_filename_component(Qt6_ROOT_DIR "${Qt6_ROOT_DIR}/.." ABSOLUTE)
 message(STATUS "qmake binary: ${QMAKE_EXECUTABLE}")
 message(STATUS "Qt 6 root directory: ${Qt6_ROOT_DIR}")
 
-add_subdirectory(../gpt4all-backend llmodel)
-
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_subdirectory(../gpt4all-backend llmodel)
 
 qt_add_executable(chat
     main.cpp
@@ -68,6 +71,7 @@ qt_add_executable(chat
     localdocs.h localdocs.cpp localdocsmodel.h localdocsmodel.cpp
     llm.h llm.cpp
     server.h server.cpp
+    logger.h logger.cpp
     sysinfo.h
 )
 
@@ -92,6 +96,8 @@ qt_add_qml_module(chat
       qml/MyComboBox.qml
       qml/MyTextField.qml
       qml/MyCheckBox.qml
+      qml/MyBusyIndicator.qml
+      qml/MyToolButton.qml
     RESOURCES
       icons/send_message.svg
       icons/stop_generating.svg
@@ -136,14 +142,8 @@ target_link_libraries(chat
 set(COMPONENT_NAME_MAIN ${PROJECT_NAME})
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
 
-if(NOT (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64"))
-    add_executable(test_hw test_hw.cpp)
-    install(TARGETS test_hw DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN})
-endif()
-
 install(TARGETS chat DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN})
 install(TARGETS llmodel DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS llama DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 
 set(CPACK_GENERATOR "IFW")
 set(CPACK_VERBATIM_VARIABLES YES)

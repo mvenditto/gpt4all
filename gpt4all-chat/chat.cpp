@@ -45,7 +45,6 @@ void Chat::connectLLM()
     // Should be in same thread
     connect(Download::globalInstance(), &Download::modelListChanged, this, &Chat::modelListChanged, Qt::DirectConnection);
     connect(this, &Chat::modelNameChanged, this, &Chat::modelListChanged, Qt::DirectConnection);
-    connect(LocalDocs::globalInstance(), &LocalDocs::receivedResult, this, &Chat::handleLocalDocsRetrieved, Qt::DirectConnection);
 
     // Should be in different threads
     connect(m_llmodel, &ChatLLM::isModelLoadedChanged, this, &Chat::isModelLoadedChanged, Qt::QueuedConnection);
@@ -63,10 +62,10 @@ void Chat::connectLLM()
     connect(this, &Chat::loadDefaultModelRequested, m_llmodel, &ChatLLM::loadDefaultModel, Qt::QueuedConnection);
     connect(this, &Chat::loadModelRequested, m_llmodel, &ChatLLM::loadModel, Qt::QueuedConnection);
     connect(this, &Chat::generateNameRequested, m_llmodel, &ChatLLM::generateName, Qt::QueuedConnection);
+    connect(this, &Chat::regenerateResponseRequested, m_llmodel, &ChatLLM::regenerateResponse, Qt::QueuedConnection);
 
     // The following are blocking operations and will block the gui thread, therefore must be fast
     // to respond to
-    connect(this, &Chat::regenerateResponseRequested, m_llmodel, &ChatLLM::regenerateResponse, Qt::BlockingQueuedConnection);
     connect(this, &Chat::resetResponseRequested, m_llmodel, &ChatLLM::resetResponse, Qt::BlockingQueuedConnection);
     connect(this, &Chat::resetContextRequested, m_llmodel, &ChatLLM::resetContext, Qt::BlockingQueuedConnection);
 }
@@ -97,61 +96,40 @@ bool Chat::isModelLoaded() const
     return m_llmodel->isModelLoaded();
 }
 
-void Chat::prompt(const QString &prompt, const QString &prompt_template, int32_t n_predict,
-    int32_t top_k, float top_p, float temp, int32_t n_batch, float repeat_penalty,
-    int32_t repeat_penalty_tokens)
+void Chat::resetResponseState()
 {
-    Q_ASSERT(m_results.isEmpty());
-    m_results.clear(); // just in case, but the assert above is important
+    if (m_responseInProgress && m_responseState == Chat::LocalDocsRetrieval)
+        return;
+
     m_responseInProgress = true;
     m_responseState = Chat::LocalDocsRetrieval;
     emit responseInProgressChanged();
     emit responseStateChanged();
-    m_queuedPrompt.prompt = prompt;
-    m_queuedPrompt.prompt_template = prompt_template;
-    m_queuedPrompt.n_predict = n_predict;
-    m_queuedPrompt.top_k = top_k;
-    m_queuedPrompt.temp = temp;
-    m_queuedPrompt.n_batch = n_batch;
-    m_queuedPrompt.repeat_penalty = repeat_penalty;
-    m_queuedPrompt.repeat_penalty_tokens = repeat_penalty_tokens;
-    LocalDocs::globalInstance()->requestRetrieve(m_id, m_collections, prompt);
 }
 
-void Chat::handleLocalDocsRetrieved(const QString &uid, const QList<ResultInfo> &results)
+void Chat::prompt(const QString &prompt, const QString &prompt_template, int32_t n_predict,
+    int32_t top_k, float top_p, float temp, int32_t n_batch, float repeat_penalty,
+    int32_t repeat_penalty_tokens)
 {
-    // If the uid doesn't match, then these are not our results
-    if (uid != m_id)
-        return;
-
-    // Store our results locally
-    m_results = results;
-
-    // Augment the prompt template with the results if any
-    QList<QString> augmentedTemplate;
-    if (!m_results.isEmpty())
-        augmentedTemplate.append("### Context:");
-    for (const ResultInfo &info : m_results)
-        augmentedTemplate.append(info.text);
-
-    augmentedTemplate.append(m_queuedPrompt.prompt_template);
+    resetResponseState();
     emit promptRequested(
-        m_queuedPrompt.prompt,
-        augmentedTemplate.join("\n"),
-        m_queuedPrompt.n_predict,
-        m_queuedPrompt.top_k,
-        m_queuedPrompt.top_p,
-        m_queuedPrompt.temp,
-        m_queuedPrompt.n_batch,
-        m_queuedPrompt.repeat_penalty,
-        m_queuedPrompt.repeat_penalty_tokens,
+        prompt,
+        prompt_template,
+        n_predict,
+        top_k,
+        top_p,
+        temp,
+        n_batch,
+        repeat_penalty,
+        repeat_penalty_tokens,
         LLM::globalInstance()->threadCount());
-    m_queuedPrompt = Prompt();
 }
 
 void Chat::regenerateResponse()
 {
-    emit regenerateResponseRequested(); // blocking queued connection
+    const int index = m_chatModel->count() - 1;
+    m_chatModel->updateReferences(index, QString(), QList<QString>());
+    emit regenerateResponseRequested();
 }
 
 void Chat::stopGenerating()
@@ -195,9 +173,14 @@ void Chat::handleModelLoadedChanged()
         deleteLater();
 }
 
+QList<ResultInfo> Chat::databaseResults() const
+{
+    return m_llmodel->databaseResults();
+}
+
 void Chat::promptProcessing()
 {
-    m_responseState = !m_results.isEmpty() ? Chat::LocalDocsProcessing : Chat::PromptProcessing;
+    m_responseState = !databaseResults().isEmpty() ? Chat::LocalDocsProcessing : Chat::PromptProcessing;
     emit responseStateChanged();
 }
 
@@ -207,7 +190,7 @@ void Chat::responseStopped()
     QList<QString> references;
     QList<QString> referencesContext;
     int validReferenceNumber = 1;
-    for (const ResultInfo &info : m_results) {
+    for (const ResultInfo &info : databaseResults()) {
         if (info.file.isEmpty())
             continue;
         if (validReferenceNumber == 1)
@@ -241,7 +224,6 @@ void Chat::responseStopped()
     m_chatModel->updateReferences(index, references.join("\n"), referencesContext);
     emit responseChanged();
 
-    m_results.clear();
     m_responseInProgress = false;
     m_responseState = Chat::ResponseStopped;
     emit responseInProgressChanged();
@@ -266,6 +248,7 @@ void Chat::setModelName(const QString &modelName)
 
 void Chat::newPromptResponsePair(const QString &prompt)
 {
+    resetResponseState();
     m_chatModel->updateCurrentResponse(m_chatModel->count() - 1, false);
     m_chatModel->appendPrompt(tr("Prompt: "), prompt);
     m_chatModel->appendResponse(tr("Response: "), prompt);
@@ -274,6 +257,7 @@ void Chat::newPromptResponsePair(const QString &prompt)
 
 void Chat::serverNewPromptResponsePair(const QString &prompt)
 {
+    resetResponseState();
     m_chatModel->updateCurrentResponse(m_chatModel->count() - 1, false);
     m_chatModel->appendPrompt(tr("Prompt: "), prompt);
     m_chatModel->appendResponse(tr("Response: "), prompt);
