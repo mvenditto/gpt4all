@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Threading.Channels;
+using Gpt4All.Prediction;
 
 namespace Gpt4All;
 
@@ -11,11 +12,14 @@ public record TextPredictionStreamingResult : ITextPredictionStreamingResult
 
     public string? ErrorMessage { get; internal set; }
 
+    public PredictionInfo Usage { get; internal set; }
+
     public Task Completion => _channel.Reader.Completion;
 
     internal TextPredictionStreamingResult()
     {
         _channel = Channel.CreateUnbounded<string>();
+        Usage = PredictionInfo.Empty;
     }
 
     internal bool Append(string token)

@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Gpt4All.Prediction;
 
 namespace Gpt4All;
 
@@ -10,9 +11,12 @@ public record TextPredictionResult : ITextPredictionResult
 
     public string? ErrorMessage { get; internal set; }
 
+    public PredictionInfo Usage { get; internal set; }
+
     internal TextPredictionResult()
     {
         _result = new StringBuilder();
+        Usage = PredictionInfo.Empty;
     }
 
     internal void Append(string token)
