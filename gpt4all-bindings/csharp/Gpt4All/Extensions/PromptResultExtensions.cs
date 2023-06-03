@@ -1,5 +1,4 @@
 ﻿using Gpt4All.Bindings;
-using Gpt4All.Prediction;
 
 namespace Gpt4All;
 

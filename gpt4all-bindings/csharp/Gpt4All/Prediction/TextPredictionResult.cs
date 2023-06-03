@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Gpt4All.Prediction;
 
 namespace Gpt4All;
 

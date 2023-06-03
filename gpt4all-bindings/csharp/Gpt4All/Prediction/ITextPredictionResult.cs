@@ -1,6 +1,4 @@
-﻿using Gpt4All.Prediction;
-
-namespace Gpt4All;
+﻿namespace Gpt4All;
 
 public interface ITextPredictionResult
 {

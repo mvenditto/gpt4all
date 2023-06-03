@@ -1,5 +1,4 @@
-﻿using System;
-using Gpt4All.Bindings;
+﻿using Gpt4All.Bindings;
 
 namespace Gpt4All;
 

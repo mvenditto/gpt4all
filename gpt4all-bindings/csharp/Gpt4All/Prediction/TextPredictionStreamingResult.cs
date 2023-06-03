@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Threading.Channels;
-using Gpt4All.Prediction;
 
 namespace Gpt4All;
 

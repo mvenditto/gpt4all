@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Gpt4All.Prediction;
+namespace Gpt4All;
 
 /// <summary>
 /// Stats related to a prediction

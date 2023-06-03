@@ -33,7 +33,7 @@ while (true)
     {
         case "!R":
             if (lastResult == null) break;
-            await RegenerateResponse();
+            lastResult = await RegenerateResponse();
             break;
         default:
             lastResult = await GeneratedResponse(userInput);
@@ -51,7 +51,6 @@ async Task<ITextPredictionStreamingResult> GeneratedResponse(string userInput)
 
     Console.WriteLine("\n[Assistant]:");
 
-    // stream the predicted tokens
     await foreach (var token in message.GetPredictionStreamingAsync())
     {
         Console.Write(token);
@@ -61,19 +60,20 @@ async Task<ITextPredictionStreamingResult> GeneratedResponse(string userInput)
     return message;
 }
 
-async Task RegenerateResponse()
+async Task<ITextPredictionStreamingResult> RegenerateResponse()
 {
-    // get the last message from the user
-    var lastUserMsg = chat.Messages.SkipLast(1).TakeLast(1).Single();
+    var message = await model.RegenerateChatResponse(
+        chat,
+        lastResult.Usage.TotalTokens // past conversation tokens
+    );
 
-    // delete the last prompt/response couple of messages
-    chat.Messages = chat.Messages.Take(chat.Messages.Count - 2).ToList();
+    await foreach (var token in message.GetPredictionStreamingAsync())
+    {
+        Console.Write(token);
+    }
 
-    // adjust the number of tokens in past conversation
-    chat.Context.PastNum -= Math.Max(0, chat.Context.PastNum - lastResult.Usage.TotalTokens);
-
-    // regenerate the response
-    lastResult = await GeneratedResponse(lastUserMsg.Content);
+    Console.WriteLine();
+    return message;
 }
 
 class ChatPromptFormatter : DefaultPromptFormatter
