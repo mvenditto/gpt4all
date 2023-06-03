@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		build_linux.sh = build_linux.sh
 		build_win-mingw.ps1 = build_win-mingw.ps1
 		build_win-msvc.ps1 = build_win-msvc.ps1
+		CHANGELOG.md = CHANGELOG.md
 		docs\gpt4all_csharp.md = docs\gpt4all_csharp.md
 		README.md = README.md
 	EndProjectSection
@@ -21,7 +22,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gpt4All.Tests", "Gpt4All.Te
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{BCC2FF73-BD65-479E-A8B9-978B61F32E3D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicChat", "Gpt4All.Samples\BasicChat\BasicChat.csproj", "{591D26FD-BC02-4B8F-B042-861F0715C739}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicChat", "Gpt4All.Samples\BasicChat\BasicChat.csproj", "{591D26FD-BC02-4B8F-B042-861F0715C739}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
