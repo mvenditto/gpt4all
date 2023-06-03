@@ -1,4 +1,12 @@
-﻿[User]:
+﻿## Chat Sample
+Input your message or `!R` to regenerate the last Assistant response.
+
+## Example conversation
+<details>
+<summary>The sun</summary>
+
+```
+[User]:
 What is the sun?
 
 [Assistant]:
@@ -33,3 +41,6 @@ summarize all above in 2 sentences.
 
 [Assistant]:
 The sun is a yellow dwarf star that has exhausted its hydrogen fuel and is now burning helium, it gives us light and warmth. It is also the main type of star in our solar system.
+```
+
+</details>
