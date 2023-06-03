@@ -4,7 +4,7 @@ var modelFactory = new Gpt4AllModelFactory();
 
 if (args.Length < 2)
 {
-    Console.WriteLine("Usage: Gpt4All.Samples <model-path> <prompt>");
+    Console.WriteLine("Usage: BasicTextCompletion <model-path> <prompt>");
     return;
 }
 

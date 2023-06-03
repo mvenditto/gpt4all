@@ -3,7 +3,7 @@ using Gpt4All.Chat;
 
 if (args.Length < 1)
 {
-    Console.WriteLine("Usage: Gpt4All.Samples <model-path>");
+    Console.WriteLine("Usage: BasicChat <model-path>");
     return;
 }
 
