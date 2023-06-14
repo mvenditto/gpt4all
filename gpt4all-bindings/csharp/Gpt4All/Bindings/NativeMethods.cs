@@ -2,7 +2,7 @@
 
 namespace Gpt4All.Bindings;
 
-public unsafe partial struct llmodel_prompt_context
+internal unsafe struct llmodel_prompt_context
 {
     public float* logits;
 

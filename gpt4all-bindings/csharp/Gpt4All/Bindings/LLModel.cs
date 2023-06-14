@@ -41,11 +41,16 @@ public record ModelRecalculatingEventArgs(bool IsRecalculating);
 /// </summary>
 public class LLModel : ILLModel
 {
+    /// <summary>
+    /// The model's native handle
+    /// </summary>
     protected readonly IntPtr _handle;
+
     private readonly ModelType _modelType;
     private readonly ILogger _logger;
     private bool _disposed;
 
+    /// <inheritdoc/>
     public ModelType ModelType => _modelType;
 
     internal LLModel(IntPtr handle, ModelType modelType, ILogger? logger = null)
@@ -60,6 +65,7 @@ public class LLModel : ILLModel
     /// </summary>
     /// <param name="handle">Pointer to underlying model</param>
     /// <param name="modelType">The model type</param>
+    /// <param name="logger">An optional logger</param>
     public static LLModel Create(IntPtr handle, ModelType modelType, ILogger? logger = null)
     {
         return new LLModel(handle, modelType, logger: logger);
@@ -191,10 +197,18 @@ public class LLModel : ILLModel
         return NativeMethods.llmodel_loadModel(_handle, modelPath);
     }
 
+    /// <summary>
+    /// Destroys the model
+    /// </summary>
     protected void Destroy()
     {
         NativeMethods.llmodel_model_destroy(_handle);
     }
+
+    /// <summary>
+    /// Calls the model destructor and disposes other resources
+    /// </summary>
+    /// <param name="disposing"></param>
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
@@ -214,6 +228,9 @@ public class LLModel : ILLModel
         _disposed = true;
     }
 
+    /// <summary>
+    /// Dispose the model
+    /// </summary>
     public void Dispose()
     {
         Dispose(disposing: true);
