@@ -25,7 +25,7 @@ The focus should be on keeping a human-readable changelog to ease the investigat
 
 - Added support to integrate with the .NET logging API ([#714](https://github.com/nomic-ai/gpt4all/pull/714))
 
-### Chaged
+### Changed
 
 - added an optional `Microsoft.Extensions.Logging.ILogger` parameter to the ctors of `Gpt4All`, `Gpt4AllModelFactory` and `LLModel`
 
