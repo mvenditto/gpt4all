@@ -340,6 +340,9 @@ dotnet_diagnostic.IDE2003.severity = warning
 # csharp_style_allow_blank_line_after_colon_in_constructor_initializer_experimental
 dotnet_diagnostic.IDE2004.severity = warning
 
+# xml docs
+dotnet_diagnostic.CS1591.severity = none
+
 [src/{VisualStudio}/**/*.{cs,vb}]
 # CA1822: Make member static
 # There is a risk of accidentally breaking an internal API that partners rely on though IVT.
