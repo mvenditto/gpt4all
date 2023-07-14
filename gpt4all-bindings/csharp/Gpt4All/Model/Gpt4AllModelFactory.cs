@@ -67,7 +67,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
 
         Debug.Assert(underlyingModel.IsLoaded());
 
-        return new Gpt4All(underlyingModel, logger: logger);
+        return new Gpt4All(underlyingModel, modelFilePath: modelPath, logger: logger);
     }
 
     /// <summary>

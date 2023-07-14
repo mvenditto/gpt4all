@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Gpt4All.Bindings;
+using Gpt4All.Embedding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -12,6 +13,7 @@ public class Gpt4All : IGpt4AllModel
 {
     private readonly ILLModel _model;
     private readonly ILogger _logger;
+    private readonly string _modelFilePath;
     private Lazy<LLModelPromptContext> _context = new(PredictRequestOptions.Defaults.ToPromptContext);
 
     private const string ResponseErrorMessage =
@@ -30,10 +32,11 @@ public class Gpt4All : IGpt4AllModel
         }
     }
 
-    internal Gpt4All(ILLModel model, ILogger? logger = null)
+    internal Gpt4All(ILLModel model, string modelFilePath, ILogger? logger = null)
     {
         _model = model;
         _logger = logger ?? NullLogger.Instance;
+        _modelFilePath = modelFilePath;
         PromptFormatter = new DefaultPromptFormatter();
     }
 
@@ -126,6 +129,31 @@ public class Gpt4All : IGpt4AllModel
         }, CancellationToken.None);
 
         return Task.FromResult((ITextPredictionStreamingResult)result);
+    }
+
+    public Task<ITextEmbeddingResult> GenerateEmbedding(string text, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            unsafe
+            {
+                var embeddingsPtr = _model.GenerateEmbedding(text, out var embeddingsLength);
+                var result = new TextEmbeddingResult(embeddingsPtr, embeddingsLength);
+                return (ITextEmbeddingResult)result;
+            }
+        }, cancellationToken);
+    }
+
+    public nuint GetRequiredMemory()
+    {
+        var requiredMem = _model.GetRequiredMemory(_modelFilePath);
+
+        if (requiredMem <= 0)
+        {
+            throw new ModelLoadException($"The model file could not be parsed: '{_modelFilePath}'");
+        }
+
+        return requiredMem;
     }
 
     protected virtual void Dispose(bool disposing)

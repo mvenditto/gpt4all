@@ -25,7 +25,11 @@ public interface ILLModel : IDisposable
         Func<ModelRecalculatingEventArgs, bool>? recalculateCallback = null,
         CancellationToken cancellationToken = default);
 
+    nuint GetRequiredMemory(string modelPath);
+
     unsafe ulong RestoreStateData(byte* destination);
 
     unsafe ulong SaveStateData(byte* source);
+
+    unsafe float* GenerateEmbedding(string text, out nuint embeddingsLength);
 }

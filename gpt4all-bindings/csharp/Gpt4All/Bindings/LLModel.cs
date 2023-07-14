@@ -204,6 +204,20 @@ public class LLModel : ILLModel
     {
         NativeMethods.llmodel_model_destroy(_handle);
     }
+
+    public nuint GetRequiredMemory(string modelPath)
+    {
+        return NativeMethods.llmodel_required_mem(_handle, modelPath);
+    }
+
+    public unsafe float* GenerateEmbedding(string text, out nuint embeddingLength)
+    {
+        nuint embeddingsArrayLength = 0;
+        var embeddings = NativeMethods.llmodel_embedding(_handle, text, ref embeddingsArrayLength);
+        embeddingLength = embeddingsArrayLength;
+        return embeddings;
+    }
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
