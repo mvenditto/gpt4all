@@ -21,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gpt4All.Tests", "Gpt4All.Te
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{27EB8959-382B-428D-8AA7-1845B2D55200}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEmbedding", "TextEmbedding\TextEmbedding.csproj", "{0D13E79B-1906-4929-91FB-E222940FFD26}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEmbedding", "Gpt4All.Samples\TextEmbedding\TextEmbedding.csproj", "{0D13E79B-1906-4929-91FB-E222940FFD26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
