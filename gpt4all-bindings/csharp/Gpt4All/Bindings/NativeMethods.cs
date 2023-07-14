@@ -114,5 +114,19 @@ internal static unsafe class NativeMethods
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern void llmodel_set_implementation_search_path([MarshalAs(UnmanagedType.LPUTF8Str)] string implementationsPath);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    public static extern nuint llmodel_required_mem(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string model_path);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    public static extern float* llmodel_embedding(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string text,
+        ref nuint embedding_size);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void llmodel_free_embedding([NativeTypeName("ptr")] float* embeddings);
 }
 #pragma warning restore CA2101
