@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Gpt4All\Gpt4All.csproj" />
+    <ProjectReference Include="..\..\Gpt4All\Gpt4All.csproj" />
   </ItemGroup>
 
     <ItemGroup>
