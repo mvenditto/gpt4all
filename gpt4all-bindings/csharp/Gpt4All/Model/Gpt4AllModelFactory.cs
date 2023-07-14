@@ -51,6 +51,16 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
             throw new ModelCreationException(modelPath, errorMessage, error.error);
         }
 
+        try
+        {
+            var requiredMemory = NativeMethods.llmodel_required_mem(handle, modelPath) / (1024D * 1024D * 1024D);
+            _logger.LogInformation("Model requires approximately {RequiredMemory:F2}GB of RAM", requiredMemory);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cannot determine model required memory");
+        }
+
         _logger.LogInformation("Model loading started");
 
         var loadedSuccessfully = NativeMethods.llmodel_loadModel(handle, modelPath);

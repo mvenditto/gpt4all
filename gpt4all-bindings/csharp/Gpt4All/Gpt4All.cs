@@ -131,7 +131,7 @@ public class Gpt4All : IGpt4AllModel
         return Task.FromResult((ITextPredictionStreamingResult)result);
     }
 
-    public Task<ITextEmbeddingResult> GenerateEmbedding(string text, CancellationToken cancellationToken = default)
+    public Task<ITextEmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
