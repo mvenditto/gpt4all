@@ -5,19 +5,14 @@
 #include <QThread>
 #include <QFileInfo>
 
-#include "localdocs.h"
+#include "database.h"
 #include "modellist.h"
 #include "../gpt4all-backend/llmodel.h"
 
 enum LLModelType {
-    MPT_,
     GPTJ_,
     LLAMA_,
-    CHATGPT_,
-    REPLIT_,
-    FALCON_,
-    BERT_,
-    STARCODER_
+    API_,
 };
 
 struct LLModelInfo {
@@ -76,6 +71,7 @@ public:
     ChatLLM(Chat *parent, bool isServer = false);
     virtual ~ChatLLM();
 
+    void destroy();
     bool isModelLoaded() const;
     void regenerateResponse();
     void resetResponse();
@@ -85,6 +81,9 @@ public:
 
     bool shouldBeLoaded() const { return m_shouldBeLoaded; }
     void setShouldBeLoaded(bool b);
+    void setShouldTrySwitchContext(bool b);
+    void setForceUnloadModel(bool b) { m_forceUnloadModel = b; }
+    void setMarkedForDeletion(bool b) { m_markedForDeletion = b; }
 
     QString response() const;
 
@@ -95,28 +94,33 @@ public:
 
     QString generatedName() const { return QString::fromStdString(m_nameResponse); }
 
-    bool serialize(QDataStream &stream, int version);
-    bool deserialize(QDataStream &stream, int version);
+    bool serialize(QDataStream &stream, int version, bool serializeKV);
+    bool deserialize(QDataStream &stream, int version, bool deserializeKV, bool discardKV);
+    void setStateFromText(const QVector<QPair<QString, QString>> &stateFromText) { m_stateFromText = stateFromText; }
 
 public Q_SLOTS:
     bool prompt(const QList<QString> &collectionList, const QString &prompt);
     bool loadDefaultModel();
+    bool trySwitchContextOfLoadedModel(const ModelInfo &modelInfo);
     bool loadModel(const ModelInfo &modelInfo);
     void modelChangeRequested(const ModelInfo &modelInfo);
-    void forceUnloadModel();
     void unloadModel();
     void reloadModel();
     void generateName();
     void handleChatIdChanged(const QString &id);
     void handleShouldBeLoadedChanged();
+    void handleShouldTrySwitchContextChanged();
     void handleThreadStarted();
     void handleForceMetalChanged(bool forceMetal);
+    void handleDeviceChanged();
     void processSystemPrompt();
+    void processRestoreStateFromText();
 
 Q_SIGNALS:
     void recalcChanged();
-    void isModelLoadedChanged(bool);
+    void modelLoadingPercentageChanged(float);
     void modelLoadingError(const QString &error);
+    void modelLoadingWarning(const QString &warning);
     void responseChanged(const QString &response);
     void promptProcessing();
     void responseStopped();
@@ -126,14 +130,18 @@ Q_SIGNALS:
     void stateChanged();
     void threadStarted();
     void shouldBeLoadedChanged();
+    void shouldTrySwitchContextChanged();
+    void trySwitchContextOfLoadedModelCompleted(bool);
     void requestRetrieveFromDB(const QList<QString> &collections, const QString &text, int retrievalSize, QList<ResultInfo> *results);
     void reportSpeed(const QString &speed);
+    void reportDevice(const QString &device);
+    void reportFallbackReason(const QString &fallbackReason);
     void databaseResultsChanged(const QList<ResultInfo>&);
     void modelInfoChanged(const ModelInfo &modelInfo);
 
 protected:
     bool promptInternal(const QList<QString> &collectionList, const QString &prompt, const QString &promptTemplate,
-        int32_t n_predict, int32_t top_k, float top_p, float temp, int32_t n_batch, float repeat_penalty,
+        int32_t n_predict, int32_t top_k, float top_p, float min_p, float temp, int32_t n_batch, float repeat_penalty,
         int32_t repeat_penalty_tokens);
     bool handlePrompt(int32_t token);
     bool handleResponse(int32_t token, const std::string &response);
@@ -144,6 +152,9 @@ protected:
     bool handleSystemPrompt(int32_t token);
     bool handleSystemResponse(int32_t token, const std::string &response);
     bool handleSystemRecalculate(bool isRecalc);
+    bool handleRestoreStateFromTextPrompt(int32_t token);
+    bool handleRestoreStateFromTextResponse(int32_t token, const std::string &response);
+    bool handleRestoreStateFromTextRecalculate(bool isRecalc);
     void saveState();
     void restoreState();
 
@@ -163,11 +174,16 @@ private:
     QThread m_llmThread;
     std::atomic<bool> m_stopGenerating;
     std::atomic<bool> m_shouldBeLoaded;
+    std::atomic<bool> m_shouldTrySwitchContext;
     std::atomic<bool> m_isRecalc;
+    std::atomic<bool> m_forceUnloadModel;
+    std::atomic<bool> m_markedForDeletion;
     bool m_isServer;
     bool m_forceMetal;
     bool m_reloadingToChangeVariant;
     bool m_processedSystemPrompt;
+    bool m_restoreStateFromText;
+    QVector<QPair<QString, QString>> m_stateFromText;
 };
 
 #endif // CHATLLM_H

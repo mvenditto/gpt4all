@@ -2,8 +2,10 @@
 
 /// This file implements the gpt4all.d.ts file endings.
 /// Written in commonjs to support both ESM and CJS projects.
-const { existsSync } = require("fs");
+const { existsSync } = require("node:fs");
 const path = require("node:path");
+const Stream = require("node:stream");
+const assert = require("node:assert");
 const { LLModel } = require("node-gyp-build")(path.resolve(__dirname, ".."));
 const {
     retrieveModel,
@@ -18,13 +20,14 @@ const {
     DEFAULT_MODEL_LIST_URL,
 } = require("./config.js");
 const { InferenceModel, EmbeddingModel } = require("./models.js");
+const { ChatSession } = require("./chat-session.js");
 
 /**
  * Loads a machine learning model with the specified name. The defacto way to create a model.
  * By default this will download a model from the official GPT4ALL website, if a model is not present at given path.
  *
  * @param {string} modelName - The name of the model to load.
- * @param {LoadModelOptions|undefined} [options] - (Optional) Additional options for loading the model.
+ * @param {import('./gpt4all').LoadModelOptions|undefined} [options] - (Optional) Additional options for loading the model.
  * @returns {Promise<InferenceModel | EmbeddingModel>} A promise that resolves to an instance of the loaded LLModel.
  */
 async function loadModel(modelName, options = {}) {
@@ -33,7 +36,10 @@ async function loadModel(modelName, options = {}) {
         librariesPath: DEFAULT_LIBRARIES_DIRECTORY,
         type: "inference",
         allowDownload: true,
-        verbose: true,
+        verbose: false,
+        device: "cpu",
+        nCtx: 2048,
+        ngl: 100,
         ...options,
     };
 
@@ -44,30 +50,31 @@ async function loadModel(modelName, options = {}) {
         verbose: loadOptions.verbose,
     });
 
-    const libSearchPaths = loadOptions.librariesPath.split(";");
+    assert.ok(
+        typeof loadOptions.librariesPath === "string",
+        "Libraries path should be a string"
+    );
+    const existingPaths = loadOptions.librariesPath
+        .split(";")
+        .filter(existsSync)
+        .join(";");
 
-    let libPath = null;
-
-    for (const searchPath of libSearchPaths) {
-        if (existsSync(searchPath)) {
-            libPath = searchPath;
-            break;
-        }
-    }
-    if (!libPath) {
-        throw Error("Could not find a valid path from " + libSearchPaths);
-    }
     const llmOptions = {
         model_name: appendBinSuffixIfMissing(modelName),
         model_path: loadOptions.modelPath,
-        library_path: libPath,
+        library_path: existingPaths,
+        device: loadOptions.device,
+        nCtx: loadOptions.nCtx,
+        ngl: loadOptions.ngl,
     };
 
     if (loadOptions.verbose) {
-        console.debug("Creating LLModel with options:", llmOptions);
+        console.debug("Creating LLModel:", {
+            llmOptions,
+            modelConfig,
+        });
     }
     const llmodel = new LLModel(llmOptions);
-
     if (loadOptions.type === "embedding") {
         return new EmbeddingModel(llmodel, modelConfig);
     } else if (loadOptions.type === "inference") {
@@ -77,75 +84,43 @@ async function loadModel(modelName, options = {}) {
     }
 }
 
-/**
- * Formats a list of messages into a single prompt string.
- */
-function formatChatPrompt(
-    messages,
-    {
-        systemPromptTemplate,
-        defaultSystemPrompt,
-        promptTemplate,
-        promptFooter,
-        promptHeader,
-    }
-) {
-    const systemMessages = messages
-        .filter((message) => message.role === "system")
-        .map((message) => message.content);
+function createEmbedding(model, text, options={}) {
+    let {
+        dimensionality = undefined,
+        longTextMode = "mean",
+        atlas = false,
+    } = options;
 
-    let fullPrompt = "";
-
-    if (promptHeader) {
-        fullPrompt += promptHeader + "\n\n";
-    }
-
-    if (systemPromptTemplate) {
-        // if user specified a template for the system prompt, put all system messages in the template
-        let systemPrompt = "";
-
-        if (systemMessages.length > 0) {
-            systemPrompt += systemMessages.join("\n");
-        }
-
-        if (systemPrompt) {
-            fullPrompt +=
-                systemPromptTemplate.replace("%1", systemPrompt) + "\n";
-        }
-    } else if (defaultSystemPrompt) {
-        // otherwise, use the system prompt from the model config and ignore system messages
-        fullPrompt += defaultSystemPrompt + "\n\n";
-    }
-
-    if (systemMessages.length > 0 && !systemPromptTemplate) {
-        console.warn(
-            "System messages were provided, but no systemPromptTemplate was specified. System messages will be ignored."
-        );
-    }
-
-    for (const message of messages) {
-        if (message.role === "user") {
-            const userMessage = promptTemplate.replace(
-                "%1",
-                message["content"]
+    if (dimensionality === undefined) {
+        dimensionality = -1;
+    } else {
+        if (dimensionality <= 0) {
+            throw new Error(
+                `Dimensionality must be undefined or a positive integer, got ${dimensionality}`
             );
-            fullPrompt += userMessage;
         }
-        if (message["role"] == "assistant") {
-            const assistantMessage = message["content"] + "\n";
-            fullPrompt += assistantMessage;
+        if (dimensionality < model.MIN_DIMENSIONALITY) {
+            console.warn(
+                `Dimensionality ${dimensionality} is less than the suggested minimum of ${model.MIN_DIMENSIONALITY}. Performance may be degraded.`
+            );
         }
     }
 
-    if (promptFooter) {
-        fullPrompt += "\n\n" + promptFooter;
+    let doMean;
+    switch (longTextMode) {
+        case "mean":
+            doMean = true;
+            break;
+        case "truncate":
+            doMean = false;
+            break;
+        default:
+            throw new Error(
+                `Long text mode must be one of 'mean' or 'truncate', got ${longTextMode}`
+            );
     }
 
-    return fullPrompt;
-}
-
-function createEmbedding(model, text) {
-    return model.embed(text);
+    return model.embed(text, options?.prefix, dimensionality, doMean, atlas);
 }
 
 const defaultCompletionOptions = {
@@ -154,78 +129,75 @@ const defaultCompletionOptions = {
 };
 
 async function createCompletion(
-    model,
-    messages,
+    provider,
+    input,
     options = defaultCompletionOptions
 ) {
-    if (options.hasDefaultHeader !== undefined) {
-        console.warn(
-            "hasDefaultHeader (bool) is deprecated and has no effect, use promptHeader (string) instead"
-        );
-    }
-
-    if (options.hasDefaultFooter !== undefined) {
-        console.warn(
-            "hasDefaultFooter (bool) is deprecated and has no effect, use promptFooter (string) instead"
-        );
-    }
-
-    const optionsWithDefaults = {
+    const completionOptions = {
         ...defaultCompletionOptions,
         ...options,
     };
 
-    const {
-        verbose,
-        systemPromptTemplate,
-        promptTemplate,
-        promptHeader,
-        promptFooter,
-        ...promptContext
-    } = optionsWithDefaults;
-
-    const prompt = formatChatPrompt(messages, {
-        systemPromptTemplate,
-        defaultSystemPrompt: model.config.systemPrompt,
-        promptTemplate: promptTemplate || model.config.promptTemplate || "%1",
-        promptHeader: promptHeader || "",
-        promptFooter: promptFooter || "",
-        // These were the default header/footer prompts used for non-chat single turn completions.
-        // both seem to be working well still with some models, so keeping them here for reference.
-        // promptHeader: '### Instruction: The prompt below is a question to answer, a task to complete, or a conversation to respond to; decide which and write an appropriate response.',
-        // promptFooter: '### Response:',
-    });
-
-    if (verbose) {
-        console.debug("Sending Prompt:\n" + prompt);
-    }
-
-    const response = await model.generate(prompt, promptContext);
-
-    if (verbose) {
-        console.debug("Received Response:\n" + response);
-    }
+    const result = await provider.generate(
+        input,
+        completionOptions,
+    );
 
     return {
-        llmodel: model.llm.name(),
+        model: provider.modelName,
         usage: {
-            prompt_tokens: prompt.length,
-            completion_tokens: response.length, //TODO
-            total_tokens: prompt.length + response.length, //TODO
+            prompt_tokens: result.tokensIngested,
+            total_tokens: result.tokensIngested + result.tokensGenerated,
+            completion_tokens: result.tokensGenerated,
+            n_past_tokens: result.nPast,
         },
         choices: [
             {
                 message: {
                     role: "assistant",
-                    content: response,
+                    content: result.text,
                 },
+                // TODO some completion APIs also provide logprobs and finish_reason, could look into adding those
             },
         ],
     };
 }
 
-function createTokenStream() {
-    throw Error("This API has not been completed yet!");
+function createCompletionStream(
+    provider,
+    input,
+    options = defaultCompletionOptions
+) {
+    const completionStream = new Stream.PassThrough({
+        encoding: "utf-8",
+    });
+
+    const completionPromise = createCompletion(provider, input, {
+        ...options,
+        onResponseToken: (tokenId, token) => {
+            completionStream.push(token);
+            if (options.onResponseToken) {
+                return options.onResponseToken(tokenId, token);
+            }
+        },
+    }).then((result) => {
+        completionStream.push(null);
+        completionStream.emit("end");
+        return result;
+    });
+
+    return {
+        tokens: completionStream,
+        result: completionPromise,
+    };
+}
+
+async function* createCompletionGenerator(provider, input, options) {
+    const completion = createCompletionStream(provider, input, options);
+    for await (const chunk of completion.tokens) {
+        yield chunk;
+    }
+    return await completion.result;
 }
 
 module.exports = {
@@ -237,10 +209,12 @@ module.exports = {
     LLModel,
     InferenceModel,
     EmbeddingModel,
+    ChatSession,
     createCompletion,
+    createCompletionStream,
+    createCompletionGenerator,
     createEmbedding,
     downloadModel,
     retrieveModel,
     loadModel,
-    createTokenStream,
 };

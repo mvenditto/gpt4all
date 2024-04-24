@@ -84,7 +84,7 @@ public:
     Q_INVOKABLE void addChat()
     {
         // Don't add a new chat if we already have one
-        if (m_newChat || m_dummyChat)
+        if (m_newChat)
             return;
 
         // Create a new chat pointer and connect it to determine when it is populated
@@ -99,18 +99,6 @@ public:
         endInsertRows();
         emit countChanged();
         setCurrentChat(m_newChat);
-    }
-
-    Q_INVOKABLE void addDummyChat()
-    {
-        // Create a new dummy chat pointer and don't connect it
-        m_dummyChat = new Chat(this);
-        beginInsertRows(QModelIndex(), 0, 0);
-        m_chats.prepend(m_dummyChat);
-        endInsertRows();
-        emit countChanged();
-        m_currentChat = m_dummyChat;
-        emit currentChatChanged();
     }
 
     Q_INVOKABLE void addServerChat()
@@ -155,6 +143,8 @@ public:
             m_newChat = nullptr;
         }
 
+        chat->markForDeletion();
+
         const int index = m_chats.indexOf(chat);
         if (m_chats.count() < 3 /*m_serverChat included*/) {
             addChat();
@@ -191,9 +181,9 @@ public:
         if (m_currentChat && m_currentChat != m_serverChat)
             m_currentChat->unloadModel();
         m_currentChat = chat;
-        if (!m_currentChat->isModelLoaded() && m_currentChat != m_serverChat)
-            m_currentChat->reloadModel();
         emit currentChatChanged();
+        if (!m_currentChat->isModelLoaded() && m_currentChat != m_serverChat)
+            m_currentChat->trySwitchContextOfLoadedModel();
     }
 
     Q_INVOKABLE Chat* get(int index)
@@ -203,6 +193,9 @@ public:
     }
 
     int count() const { return m_chats.size(); }
+
+    // stop ChatLLM threads for clean shutdown
+    void destroyChats() { for (auto *chat: m_chats) { chat->destroy(); } }
 
     void removeChatFile(Chat *chat) const;
     Q_INVOKABLE void saveChats();
@@ -251,10 +244,9 @@ private Q_SLOTS:
     }
 
 private:
-    Chat* m_newChat;
-    Chat* m_dummyChat;
-    Chat* m_serverChat;
-    Chat* m_currentChat;
+    Chat* m_newChat = nullptr;
+    Chat* m_serverChat = nullptr;
+    Chat* m_currentChat = nullptr;
     QList<Chat*> m_chats;
 
 private:

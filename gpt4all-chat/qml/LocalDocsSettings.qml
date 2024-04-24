@@ -5,6 +5,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import localdocs
+import modellist
 import mysettings
 import network
 
@@ -13,7 +14,11 @@ MySettingsTab {
         MySettings.restoreLocalDocsDefaults();
     }
 
-    title: qsTr("LocalDocs Plugin (BETA)")
+    property bool hasEmbeddingModel: ModelList.installedEmbeddingModels.count !== 0
+    showAdvancedSettingsButton: hasEmbeddingModel
+    showRestoreDefaultsButton: hasEmbeddingModel
+
+    title: qsTr("LocalDocs")
     contentItem: ColumnLayout {
         id: root
         spacing: 10
@@ -21,7 +26,29 @@ MySettingsTab {
         property alias collection: collection.text
         property alias folder_path: folderEdit.text
 
+        MySettingsLabel {
+            id: downloadLabel
+            Layout.fillWidth: true
+            Layout.maximumWidth: parent.width
+            wrapMode: Text.Wrap
+            visible: !hasEmbeddingModel
+            Layout.alignment: Qt.AlignLeft
+            text: qsTr("This feature requires the download of a text embedding model in order to index documents for later search. Please download the <b>SBert</a> text embedding model from the download dialog to proceed.")
+        }
+
+        MySettingsButton {
+            visible: !hasEmbeddingModel
+            Layout.topMargin: 20
+            Layout.alignment: Qt.AlignLeft
+            text: qsTr("Download")
+            font.pixelSize: theme.fontSizeLarger
+            onClicked: {
+                downloadClicked()
+            }
+        }
+
         Item {
+            visible: hasEmbeddingModel
             Layout.fillWidth: true
             height: row.height
             RowLayout {
@@ -68,7 +95,7 @@ MySettingsTab {
                     }
                 }
 
-                MyButton {
+                MySettingsButton {
                     id: browseButton
                     text: qsTr("Browse")
                     onClicked: {
@@ -78,12 +105,12 @@ MySettingsTab {
                     }
                 }
 
-                MyButton {
+                MySettingsButton {
                     id: addButton
                     text: qsTr("Add")
                     Accessible.role: Accessible.Button
                     Accessible.name: text
-                    Accessible.description: qsTr("Add button")
+                    Accessible.description: qsTr("Add collection")
                     onClicked: {
                         var isError = false;
                         if (root.collection === "") {
@@ -106,6 +133,7 @@ MySettingsTab {
         }
 
         ColumnLayout {
+            visible: hasEmbeddingModel
             spacing: 0
             Repeater {
                 model: LocalDocs.localDocsModel
@@ -113,7 +141,7 @@ MySettingsTab {
                     id: item
                     Layout.fillWidth: true
                     height: buttons.height + 20
-                    color: index % 2 === 0 ? theme.backgroundDark : theme.backgroundDarker
+                    color: index % 2 === 0 ? theme.darkContrast : theme.lightContrast
                     property bool removing: false
 
                     Text {
@@ -145,22 +173,17 @@ MySettingsTab {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.margins: 20
-                        width: Math.max(removeButton.width, busyIndicator.width)
-                        height: Math.max(removeButton.height, busyIndicator.height)
-                        MyButton {
+                        width: removeButton.width
+                        height:removeButton.height
+                        MySettingsButton {
                             id: removeButton
                             anchors.centerIn: parent
                             text: qsTr("Remove")
-                            visible: !item.removing && installed
+                            visible: !item.removing
                             onClicked: {
                                 item.removing = true
                                 LocalDocs.removeFolder(collection, folder_path)
                             }
-                        }
-                        MyBusyIndicator {
-                            id: busyIndicator
-                            anchors.centerIn: parent
-                            visible: item.removing || !installed
                         }
                     }
                 }
@@ -168,11 +191,10 @@ MySettingsTab {
         }
 
         RowLayout {
-            Label {
+            visible: hasEmbeddingModel
+            MySettingsLabel {
                 id: showReferencesLabel
-                text: qsTr("Show references:")
-                color: theme.textColor
-                font.pixelSize: theme.fontSizeLarge
+                text: qsTr("Show references")
             }
             MyCheckBox {
                 id: showReferencesBox
@@ -186,9 +208,10 @@ MySettingsTab {
         }
 
         Rectangle {
+            visible: hasEmbeddingModel
             Layout.fillWidth: true
-            height: 1
-            color: theme.tabBorder
+            height: 3
+            color: theme.accentColor
         }
     }
     advancedSettings: GridLayout {
@@ -196,23 +219,22 @@ MySettingsTab {
         columns: 3
         rowSpacing: 10
         columnSpacing: 10
+        visible: hasEmbeddingModel
 
         Rectangle {
             Layout.row: 3
             Layout.column: 0
             Layout.fillWidth: true
             Layout.columnSpan: 3
-            height: 1
-            color: theme.tabBorder
+            height: 3
+            color: theme.accentColor
         }
 
-        Label {
+        MySettingsLabel {
             id: chunkLabel
             Layout.row: 1
             Layout.column: 0
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            text: qsTr("Document snippet size (characters):")
+            text: qsTr("Document snippet size (characters)")
         }
 
         MyTextField {
@@ -236,19 +258,17 @@ MySettingsTab {
             }
         }
 
-        Label {
+        MySettingsLabel {
             id: contextItemsPerPrompt
             Layout.row: 2
             Layout.column: 0
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            text: qsTr("Document snippets per prompt:")
+            text: qsTr("Max document snippets per prompt")
         }
 
         MyTextField {
             Layout.row: 2
             Layout.column: 1
-            ToolTip.text: qsTr("Best N matches of retrieved document snippets to add to the context for prompt.\nNOTE: larger numbers increase likelihood of factual responses, but also result in slower generation.")
+            ToolTip.text: qsTr("Max best N matches of retrieved document snippets to add to the context for prompt.\nNOTE: larger numbers increase likelihood of factual responses, but also result in slower generation.")
             ToolTip.visible: hovered
             text: MySettings.localDocsRetrievalSize
             validator: IntValidator {
@@ -272,7 +292,7 @@ MySettingsTab {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
             Layout.minimumHeight: warningLabel.height
-            Label {
+            MySettingsLabel {
                 id: warningLabel
                 width: parent.width
                 color: theme.textErrorColor

@@ -16,7 +16,7 @@ static inline QJsonObject modelToJson(const ModelInfo &info)
     QJsonObject model;
     model.insert("id", info.name());
     model.insert("object", "model");
-    model.insert("created", "who can keep track?");
+    model.insert("created", 0);
     model.insert("owned_by", "humanity");
     model.insert("root", info.name());
     model.insert("parent", QJsonValue::Null);
@@ -25,7 +25,7 @@ static inline QJsonObject modelToJson(const ModelInfo &info)
     QJsonObject permissionObj;
     permissionObj.insert("id", "foobarbaz");
     permissionObj.insert("object", "model_permission");
-    permissionObj.insert("created", "does it really matter?");
+    permissionObj.insert("created", 0);
     permissionObj.insert("allow_create_engine", false);
     permissionObj.insert("allow_sampling", false);
     permissionObj.insert("allow_logprobs", false);
@@ -71,7 +71,7 @@ Server::~Server()
 void Server::start()
 {
     m_server = new QHttpServer(this);
-    if (!m_server->listen(QHostAddress::LocalHost, 4891)) {
+    if (!m_server->listen(QHostAddress::LocalHost, MySettings::globalInstance()->networkPort())) {
         qWarning() << "ERROR: Unable to start the server";
         return;
     }
@@ -205,6 +205,10 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
     if (body.contains("top_p"))
         top_p = body["top_p"].toDouble();
 
+    float min_p = 0.f;
+    if (body.contains("min_p"))
+        min_p = body["min_p"].toDouble();
+
     int n = 1;
     if (body.contains("n"))
         n = body["n"].toInt();
@@ -312,6 +316,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
             max_tokens /*n_predict*/,
             top_k,
             top_p,
+            min_p,
             temperature,
             n_batch,
             repeat_penalty,

@@ -6,7 +6,10 @@ This package contains a set of C# bindings around the `llmodel` C-API.
 TBD
 
 ## Installation
-TBD NuGet
+
+Windows and Linux builds are available on NuGet: https://www.nuget.org/packages/Gpt4All
+
+macOS is WIP due to code signing issues, contributions are welcome.
 
 ## Project Structure
 ```
@@ -22,6 +25,12 @@ gpt4all-bindings/
           ├── ...
           └── linux-x64
 ```
+
+## Prerequisites
+
+On Windows and Linux, building GPT4All requires the complete Vulkan SDK. You may download it from here: https://vulkan.lunarg.com/sdk/home
+
+macOS users do not need Vulkan, as GPT4All will use Metal instead.
 
 ## Local Build Instructions
 > **Note** 
@@ -54,7 +63,7 @@ chmod +x ./build_linux.sh
 1. Setup
 ```
 choco install mingw
-$env:Path += ";C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
+$env:Path += ";C:\ProgramData\mingw64\mingw64\bin"
 choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'
 ```
 2. Run the `./build_win-mingw.ps1` build script

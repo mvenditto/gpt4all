@@ -9,7 +9,7 @@ GPT4All software is optimized to run inference of 3-13 billion parameter large l
 === "GPT4All Example"
     ``` py
     from gpt4all import GPT4All
-    model = GPT4All("orca-mini-3b.ggmlv3.q4_0.bin")
+    model = GPT4All("orca-mini-3b-gguf2-q4_0.gguf")
     output = model.generate("The capital of France is ", max_tokens=3)
     print(output)
     ```
@@ -38,7 +38,7 @@ The GPT4All software ecosystem is compatible with the following Transformer arch
 - `MPT` (including `Replit`)
 - `GPT-J`
 
-You can find an exhaustive list of supported models on the [website](https://gpt4all.io) or in the [models directory](https://raw.githubusercontent.com/nomic-ai/gpt4all/main/gpt4all-chat/metadata/models.json)
+You can find an exhaustive list of supported models on the [website](https://gpt4all.io) or in the [models directory](https://raw.githubusercontent.com/nomic-ai/gpt4all/main/gpt4all-chat/metadata/models3.json)
 
 
 GPT4All models are artifacts produced through a process known as neural network quantization.

@@ -1,2 +1,1 @@
-from .gpt4all import Embed4All, GPT4All  # noqa
-from .pyllmodel import LLModel  # noqa
+from .gpt4all import CancellationError as CancellationError, Embed4All as Embed4All, GPT4All as GPT4All

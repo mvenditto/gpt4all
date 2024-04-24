@@ -38,6 +38,12 @@ else()
     endif()
 endif()
 
+if (APPLE)
+    set(LLAMA_KOMPUTE_DEFAULT OFF)
+else()
+    set(LLAMA_KOMPUTE_DEFAULT ON)
+endif()
+
 
 #
 # Option list
@@ -77,7 +83,7 @@ option(LLAMA_OPENBLAS               "llama: use OpenBLAS"                       
 #option(LLAMA_CUBLAS                 "llama: use cuBLAS"                                     OFF)
 #option(LLAMA_CLBLAST                "llama: use CLBlast"                                    OFF)
 #option(LLAMA_METAL                  "llama: use Metal"                                      OFF)
-#option(LLAMA_K_QUANTS               "llama: use k-quants"                                   ON)
+option(LLAMA_KOMPUTE                "llama: use Kompute"                                    ${LLAMA_KOMPUTE_DEFAULT})
 set(LLAMA_BLAS_VENDOR "Generic" CACHE STRING "llama: BLAS library vendor")
 set(LLAMA_CUDA_DMMV_X "32" CACHE STRING "llama: x stride for dmmv CUDA kernels")
 set(LLAMA_CUDA_DMMV_Y "1" CACHE STRING  "llama: y block size for dmmv CUDA kernels")
@@ -154,13 +160,18 @@ if (LLAMA_OPENBLAS)
 endif()
 
 if (LLAMA_KOMPUTE)
+    set(LLAMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp-mainline)
+    if (NOT EXISTS "${LLAMA_DIR}/kompute/CMakeLists.txt")
+        message(FATAL_ERROR "Kompute not found")
+    endif()
+    message(STATUS "Kompute found")
+
+    add_compile_definitions(VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
     find_package(Vulkan COMPONENTS glslc REQUIRED)
     find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
     if (NOT glslc_executable)
         message(FATAL_ERROR "glslc not found")
     endif()
-
-    set(LLAMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp-mainline)
 
     function(compile_shader)
       set(options)
@@ -173,6 +184,10 @@ if (LLAMA_KOMPUTE)
         add_custom_command(
             OUTPUT ${spv_file}
             DEPENDS ${LLAMA_DIR}/${source}
+              ${LLAMA_DIR}/kompute-shaders/common.comp
+              ${LLAMA_DIR}/kompute-shaders/op_getrows.comp
+              ${LLAMA_DIR}/kompute-shaders/op_mul_mv_q_n_pre.comp
+              ${LLAMA_DIR}/kompute-shaders/op_mul_mv_q_n.comp
             COMMAND ${glslc_executable} --target-env=vulkan1.2 -o ${spv_file} ${LLAMA_DIR}/${source}
             COMMENT "Compiling ${source} to ${source}.spv"
         )
@@ -184,96 +199,118 @@ if (LLAMA_KOMPUTE)
         string(REPLACE "." "_" HEADER_FILE_DEFINE "${HEADER_FILE_DEFINE}")
         set(OUTPUT_HEADER_FILE "${HEADER_FILE}")
         message(STATUS "${HEADER_FILE} generating ${HEADER_FILE_DEFINE}")
-        add_custom_command(
-          OUTPUT ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo "/*THIS FILE HAS BEEN AUTOMATICALLY GENERATED - DO NOT EDIT*/" > ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo \"\#ifndef ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo \"\#define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo "namespace kp {" >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo "namespace shader_data {" >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_BINARY_DIR}/bin/xxd -i ${spv_file} >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo "}}" >> ${OUTPUT_HEADER_FILE}
-          COMMAND ${CMAKE_COMMAND} -E echo \"\#endif // define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
-          DEPENDS ${spv_file} xxd
-          COMMENT "Converting to hpp: ${FILE_NAME} ${CMAKE_BINARY_DIR}/bin/xxd"
-        )
+        if(CMAKE_GENERATOR MATCHES "Visual Studio")
+            add_custom_command(
+              OUTPUT ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "/*THIS FILE HAS BEEN AUTOMATICALLY GENERATED - DO NOT EDIT*/" > ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#ifndef ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "namespace kp {" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "namespace shader_data {" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/xxd -i ${RAW_FILE_NAME} >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "}}" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#endif // define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              DEPENDS ${spv_file} xxd
+              COMMENT "Converting to hpp: ${FILE_NAME} ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/xxd"
+            )
+        else()
+            add_custom_command(
+              OUTPUT ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "/*THIS FILE HAS BEEN AUTOMATICALLY GENERATED - DO NOT EDIT*/" > ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#ifndef ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "namespace kp {" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "namespace shader_data {" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_BINARY_DIR}/bin/xxd -i ${RAW_FILE_NAME} >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo "}}" >> ${OUTPUT_HEADER_FILE}
+              COMMAND ${CMAKE_COMMAND} -E echo \"\#endif // define ${HEADER_FILE_DEFINE}\" >> ${OUTPUT_HEADER_FILE}
+              DEPENDS ${spv_file} xxd
+              COMMENT "Converting to hpp: ${FILE_NAME} ${CMAKE_BINARY_DIR}/bin/xxd"
+            )
+        endif()
       endforeach()
     endfunction()
 
-    if (EXISTS "${LLAMA_DIR}/kompute/CMakeLists.txt")
-        message(STATUS "Kompute found")
-        add_subdirectory(${LLAMA_DIR}/kompute)
+    set(KOMPUTE_OPT_LOG_LEVEL Critical CACHE STRING "Kompute log level")
+    add_subdirectory(${LLAMA_DIR}/kompute)
 
-        # Compile our shaders
-        compile_shader(SOURCES
-          kompute/op_scale.comp
-          kompute/op_add.comp
-          kompute/op_addrow.comp
-          kompute/op_mul.comp
-          kompute/op_mulrow.comp
-          kompute/op_silu.comp
-          kompute/op_relu.comp
-          kompute/op_gelu.comp
-          kompute/op_softmax.comp
-          kompute/op_norm.comp
-          kompute/op_rmsnorm.comp
-          kompute/op_diagmask.comp
-          kompute/op_mul_mat_f16.comp
-          kompute/op_mul_mat_q4_0.comp
-          kompute/op_mul_mat_q4_1.comp
-          kompute/op_getrows_f16.comp
-          kompute/op_getrows_q4_0.comp
-          kompute/op_getrows_q4_1.comp
-          kompute/op_rope.comp
-          kompute/op_cpy_f16_f16.comp
-          kompute/op_cpy_f16_f32.comp
-          kompute/op_cpy_f32_f16.comp
-          kompute/op_cpy_f32_f32.comp
-        )
+    # Compile our shaders
+    compile_shader(SOURCES
+      kompute-shaders/op_scale.comp
+      kompute-shaders/op_scale_8.comp
+      kompute-shaders/op_add.comp
+      kompute-shaders/op_addrow.comp
+      kompute-shaders/op_mul.comp
+      kompute-shaders/op_silu.comp
+      kompute-shaders/op_relu.comp
+      kompute-shaders/op_gelu.comp
+      kompute-shaders/op_softmax.comp
+      kompute-shaders/op_norm.comp
+      kompute-shaders/op_rmsnorm.comp
+      kompute-shaders/op_diagmask.comp
+      kompute-shaders/op_mul_mat_mat_f32.comp
+      kompute-shaders/op_mul_mat_f16.comp
+      kompute-shaders/op_mul_mat_q8_0.comp
+      kompute-shaders/op_mul_mat_q4_0.comp
+      kompute-shaders/op_mul_mat_q4_1.comp
+      kompute-shaders/op_mul_mat_q6_k.comp
+      kompute-shaders/op_getrows_f16.comp
+      kompute-shaders/op_getrows_q4_0.comp
+      kompute-shaders/op_getrows_q4_1.comp
+      kompute-shaders/op_getrows_q6_k.comp
+      kompute-shaders/op_rope_f16.comp
+      kompute-shaders/op_rope_f32.comp
+      kompute-shaders/op_cpy_f16_f16.comp
+      kompute-shaders/op_cpy_f16_f32.comp
+      kompute-shaders/op_cpy_f32_f16.comp
+      kompute-shaders/op_cpy_f32_f32.comp
+    )
 
-        # Create a custom target for our generated shaders
-        add_custom_target(generated_shaders DEPENDS
-          shaderop_scale.h
-          shaderop_add.h
-          shaderop_addrow.h
-          shaderop_mul.h
-          shaderop_mulrow.h
-          shaderop_silu.h
-          shaderop_relu.h
-          shaderop_gelu.h
-          shaderop_softmax.h
-          shaderop_norm.h
-          shaderop_rmsnorm.h
-          shaderop_diagmask.h
-          shaderop_mul_mat_f16.h
-          shaderop_mul_mat_q4_0.h
-          shaderop_mul_mat_q4_1.h
-          shaderop_getrows_f16.h
-          shaderop_getrows_q4_0.h
-          shaderop_getrows_q4_1.h
-          shaderop_rope.h
-          shaderop_cpy_f16_f16.h
-          shaderop_cpy_f16_f32.h
-          shaderop_cpy_f32_f16.h
-          shaderop_cpy_f32_f32.h
-        )
+    # Create a custom target for our generated shaders
+    add_custom_target(generated_shaders DEPENDS
+      shaderop_scale.h
+      shaderop_scale_8.h
+      shaderop_add.h
+      shaderop_addrow.h
+      shaderop_mul.h
+      shaderop_silu.h
+      shaderop_relu.h
+      shaderop_gelu.h
+      shaderop_softmax.h
+      shaderop_norm.h
+      shaderop_rmsnorm.h
+      shaderop_diagmask.h
+      shaderop_mul_mat_mat_f32.h
+      shaderop_mul_mat_f16.h
+      shaderop_mul_mat_q8_0.h
+      shaderop_mul_mat_q4_0.h
+      shaderop_mul_mat_q4_1.h
+      shaderop_mul_mat_q6_k.h
+      shaderop_getrows_f16.h
+      shaderop_getrows_q4_0.h
+      shaderop_getrows_q4_1.h
+      shaderop_getrows_q6_k.h
+      shaderop_rope_f16.h
+      shaderop_rope_f32.h
+      shaderop_cpy_f16_f16.h
+      shaderop_cpy_f16_f32.h
+      shaderop_cpy_f32_f16.h
+      shaderop_cpy_f32_f32.h
+    )
 
-        # Create a custom command that depends on the generated_shaders
-        add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ggml-vulkan.stamp
-            COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/ggml-vulkan.stamp
-            DEPENDS generated_shaders
-            COMMENT "Ensuring shaders are generated before compiling ggml-vulkan.cpp"
-        )
+    # Create a custom command that depends on the generated_shaders
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ggml-kompute.stamp
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/ggml-kompute.stamp
+        DEPENDS generated_shaders
+        COMMENT "Ensuring shaders are generated before compiling ggml-kompute.cpp"
+    )
 
-        # Add the stamp to the main sources to ensure dependency tracking
-        set(GGML_SOURCES_KOMPUTE ${LLAMA_DIR}/ggml-vulkan.cpp ${LLAMA_DIR}/ggml-vulkan.h ${CMAKE_CURRENT_BINARY_DIR}/ggml-vulkan.stamp)
-        add_compile_definitions(GGML_USE_KOMPUTE)
-        set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} kompute)
-        set(LLAMA_EXTRA_INCLUDES ${LLAMA_EXTRA_INCLUDES} ${CMAKE_BINARY_DIR})
-    else()
-        message(WARNING "Kompute not found")
-    endif()
+    # Add the stamp to the main sources to ensure dependency tracking
+    set(GGML_SOURCES_KOMPUTE ${LLAMA_DIR}/ggml-kompute.cpp ${LLAMA_DIR}/ggml-kompute.h ${CMAKE_CURRENT_BINARY_DIR}/ggml-kompute.stamp)
+    add_compile_definitions(GGML_USE_KOMPUTE)
+    set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} kompute)
+    set(LLAMA_EXTRA_INCLUDES ${LLAMA_EXTRA_INCLUDES} ${CMAKE_BINARY_DIR})
 endif()
 
 if (LLAMA_ALL_WARNINGS)
@@ -329,6 +366,13 @@ endif()
 # TODO: probably these flags need to be tweaked on some architectures
 #       feel free to update the Makefile for your architecture and send a pull request or issue
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
+if (MSVC)
+  string(TOLOWER "${CMAKE_GENERATOR_PLATFORM}" CMAKE_GENERATOR_PLATFORM_LWR)
+  message(STATUS "CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
+else ()
+  set(CMAKE_GENERATOR_PLATFORM_LWR "")
+endif ()
+
 if (NOT MSVC)
     if (LLAMA_STATIC)
         add_link_options(-static)
@@ -342,6 +386,139 @@ if (NOT MSVC)
     if (LLAMA_NATIVE)
         add_compile_options(-march=native)
     endif()
+endif()
+
+if ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64") OR ("${CMAKE_GENERATOR_PLATFORM_LWR}" MATCHES "arm64"))
+    message(STATUS "ARM detected")
+    if (MSVC)
+        add_compile_definitions(__ARM_NEON)
+        add_compile_definitions(__ARM_FEATURE_FMA)
+        add_compile_definitions(__ARM_FEATURE_DOTPROD)
+        # add_compile_definitions(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) # MSVC doesn't support vdupq_n_f16, vld1q_f16, vst1q_f16
+        add_compile_definitions(__aarch64__) # MSVC defines _M_ARM64 instead
+    else()
+        include(CheckCXXCompilerFlag)
+        check_cxx_compiler_flag(-mfp16-format=ieee COMPILER_SUPPORTS_FP16_FORMAT_I3E)
+        if (NOT "${COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
+            add_compile_options(-mfp16-format=ieee)
+        endif()
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "armv6")
+            # Raspberry Pi 1, Zero
+            add_compile_options(-mfpu=neon-fp-armv8 -mno-unaligned-access)
+        endif()
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "armv7")
+            # Raspberry Pi 2
+            add_compile_options(-mfpu=neon-fp-armv8 -mno-unaligned-access -funsafe-math-optimizations)
+        endif()
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "armv8")
+            # Raspberry Pi 3, 4, Zero 2 (32-bit)
+            add_compile_options(-mno-unaligned-access)
+        endif()
+    endif()
+elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|i686|AMD64)$" OR "${CMAKE_GENERATOR_PLATFORM_LWR}" MATCHES "^(x86_64|i686|amd64|x64)$" )
+    message(STATUS "x86 detected")
+    if (MSVC)
+        if (LLAMA_AVX512)
+            add_compile_options($<$<COMPILE_LANGUAGE:C>:/arch:AVX512>)
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/arch:AVX512>)
+            # MSVC has no compile-time flags enabling specific
+            # AVX512 extensions, neither it defines the
+            # macros corresponding to the extensions.
+            # Do it manually.
+            if (LLAMA_AVX512_VBMI)
+                add_compile_definitions($<$<COMPILE_LANGUAGE:C>:__AVX512VBMI__>)
+                add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:__AVX512VBMI__>)
+            endif()
+            if (LLAMA_AVX512_VNNI)
+                add_compile_definitions($<$<COMPILE_LANGUAGE:C>:__AVX512VNNI__>)
+                add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:__AVX512VNNI__>)
+            endif()
+        elseif (LLAMA_AVX2)
+            add_compile_options($<$<COMPILE_LANGUAGE:C>:/arch:AVX2>)
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/arch:AVX2>)
+        elseif (LLAMA_AVX)
+            add_compile_options($<$<COMPILE_LANGUAGE:C>:/arch:AVX>)
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/arch:AVX>)
+        endif()
+    else()
+        if (LLAMA_F16C)
+            add_compile_options(-mf16c)
+        endif()
+        if (LLAMA_FMA)
+            add_compile_options(-mfma)
+        endif()
+        if (LLAMA_AVX)
+            add_compile_options(-mavx)
+        endif()
+        if (LLAMA_AVX2)
+            add_compile_options(-mavx2)
+        endif()
+        if (LLAMA_AVX512)
+            add_compile_options(-mavx512f)
+            add_compile_options(-mavx512bw)
+        endif()
+        if (LLAMA_AVX512_VBMI)
+            add_compile_options(-mavx512vbmi)
+        endif()
+        if (LLAMA_AVX512_VNNI)
+            add_compile_options(-mavx512vnni)
+        endif()
+    endif()
+elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "ppc64")
+    message(STATUS "PowerPC detected")
+    add_compile_options(-mcpu=native -mtune=native)
+    #TODO: Add  targets for Power8/Power9 (Altivec/VSX) and Power10(MMA) and query for big endian systems (ppc64/le/be)
+else()
+    message(STATUS "Unknown architecture")
+endif()
+
+#
+# POSIX conformance
+#
+
+# clock_gettime came in POSIX.1b (1993)
+# CLOCK_MONOTONIC came in POSIX.1-2001 / SUSv3 as optional
+# posix_memalign came in POSIX.1-2001 / SUSv3
+# M_PI is an XSI extension since POSIX.1-2001 / SUSv3, came in XPG1 (1985)
+add_compile_definitions(_XOPEN_SOURCE=600)
+
+# Somehow in OpenBSD whenever POSIX conformance is specified
+# some string functions rely on locale_t availability,
+# which was introduced in POSIX.1-2008, forcing us to go higher
+if (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+    remove_definitions(-D_XOPEN_SOURCE=600)
+    add_compile_definitions(_XOPEN_SOURCE=700)
+endif()
+
+# Data types, macros and functions related to controlling CPU affinity and
+# some memory allocation are available on Linux through GNU extensions in libc
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    add_compile_definitions(_GNU_SOURCE)
+endif()
+
+# RLIMIT_MEMLOCK came in BSD, is not specified in POSIX.1,
+# and on macOS its availability depends on enabling Darwin extensions
+# similarly on DragonFly, enabling BSD extensions is necessary
+if (
+    CMAKE_SYSTEM_NAME MATCHES "Darwin" OR
+    CMAKE_SYSTEM_NAME MATCHES "iOS" OR
+    CMAKE_SYSTEM_NAME MATCHES "tvOS" OR
+    CMAKE_SYSTEM_NAME MATCHES "DragonFly"
+)
+    add_compile_definitions(_DARWIN_C_SOURCE)
+endif()
+
+# alloca is a non-standard interface that is not visible on BSDs when
+# POSIX conformance is specified, but not all of them provide a clean way
+# to enable it in such cases
+if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    add_compile_definitions(__BSD_VISIBLE)
+endif()
+if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+    add_compile_definitions(_NETBSD_SOURCE)
+endif()
+if (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+    add_compile_definitions(_BSD_SOURCE)
 endif()
 
 function(include_ggml DIRECTORY SUFFIX WITH_LLAMA)
@@ -395,33 +572,26 @@ function(include_ggml DIRECTORY SUFFIX WITH_LLAMA)
         endif()
     endif()
 
-    set(GGML_SOURCES_QUANT_K )
-    set(GGML_METAL_SOURCES )
-    if (LLAMA_K_QUANTS)
-        set(GGML_SOURCES_QUANT_K
-            ${DIRECTORY}/k_quants.h
-            ${DIRECTORY}/k_quants.c)
+    set(GGML_METAL_SOURCES)
+    if (LLAMA_METAL)
+        find_library(FOUNDATION_LIBRARY         Foundation              REQUIRED)
+        find_library(METAL_FRAMEWORK            Metal                   REQUIRED)
+        find_library(METALKIT_FRAMEWORK         MetalKit                REQUIRED)
+        find_library(METALPERFORMANCE_FRAMEWORK MetalPerformanceShaders REQUIRED)
 
-        if (LLAMA_METAL)
-            find_library(FOUNDATION_LIBRARY         Foundation              REQUIRED)
-            find_library(METAL_FRAMEWORK            Metal                   REQUIRED)
-            find_library(METALKIT_FRAMEWORK         MetalKit                REQUIRED)
-            find_library(METALPERFORMANCE_FRAMEWORK MetalPerformanceShaders REQUIRED)
+        set(GGML_METAL_SOURCES ${DIRECTORY}/ggml-metal.m ${DIRECTORY}/ggml-metal.h)
+        # get full path to the file
+        #add_compile_definitions(GGML_METAL_DIR_KERNELS="${CMAKE_CURRENT_SOURCE_DIR}/")
 
-            set(GGML_METAL_SOURCES ${DIRECTORY}/ggml-metal.m ${DIRECTORY}/ggml-metal.h)
-            # get full path to the file
-            #add_compile_definitions(GGML_METAL_DIR_KERNELS="${CMAKE_CURRENT_SOURCE_DIR}/")
+        # copy ggml-metal.metal to bin directory
+        configure_file(${DIRECTORY}/ggml-metal.metal bin/ggml-metal.metal COPYONLY)
 
-            # copy ggml-metal.metal to bin directory
-            configure_file(${DIRECTORY}/ggml-metal.metal bin/ggml-metal.metal COPYONLY)
-
-            set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS}
-                ${FOUNDATION_LIBRARY}
-                ${METAL_FRAMEWORK}
-                ${METALKIT_FRAMEWORK}
-                ${METALPERFORMANCE_FRAMEWORK}
-            )
-        endif()
+        set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS}
+            ${FOUNDATION_LIBRARY}
+            ${METAL_FRAMEWORK}
+            ${METALKIT_FRAMEWORK}
+            ${METALPERFORMANCE_FRAMEWORK}
+        )
     endif()
 
     add_library(ggml${SUFFIX} OBJECT
@@ -429,15 +599,14 @@ function(include_ggml DIRECTORY SUFFIX WITH_LLAMA)
                 ${DIRECTORY}/ggml.h
                 ${DIRECTORY}/ggml-alloc.c
                 ${DIRECTORY}/ggml-alloc.h
-                ${GGML_SOURCES_QUANT_K}
+                ${DIRECTORY}/ggml-backend.c
+                ${DIRECTORY}/ggml-backend.h
+                ${DIRECTORY}/ggml-quants.h
+                ${DIRECTORY}/ggml-quants.c
                 ${GGML_SOURCES_CUDA}
                 ${GGML_METAL_SOURCES}
                 ${GGML_OPENCL_SOURCES}
                 ${GGML_SOURCES_KOMPUTE})
-
-    if (LLAMA_K_QUANTS)
-        target_compile_definitions(ggml${SUFFIX} PUBLIC GGML_USE_K_QUANTS)
-    endif()
 
     if (LLAMA_METAL AND GGML_METAL_SOURCES)
         target_compile_definitions(ggml${SUFFIX} PUBLIC GGML_USE_METAL GGML_METAL_NDEBUG)
@@ -451,15 +620,14 @@ function(include_ggml DIRECTORY SUFFIX WITH_LLAMA)
 
     if (WITH_LLAMA)
         # Backwards compatibility with old llama.cpp versions
-        set(LLAMA_UTIL_SOURCE_FILE llama-util.h)
+#        set(LLAMA_UTIL_SOURCE_FILE llama-util.h)
         if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${DIRECTORY}/${LLAMA_UTIL_SOURCE_FILE})
             set(LLAMA_UTIL_SOURCE_FILE llama_util.h)
         endif()
 
         add_library(llama${SUFFIX} STATIC
                     ${DIRECTORY}/llama.cpp
-                    ${DIRECTORY}/llama.h
-                    ${DIRECTORY}/${LLAMA_UTIL_SOURCE_FILE})
+                    ${DIRECTORY}/llama.h)
 
         if (LLAMA_METAL AND GGML_METAL_SOURCES)
             target_compile_definitions(llama${SUFFIX} PUBLIC GGML_USE_METAL GGML_METAL_NDEBUG)

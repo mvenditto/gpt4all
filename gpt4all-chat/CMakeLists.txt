@@ -17,8 +17,8 @@ if(APPLE)
 endif()
 
 set(APP_VERSION_MAJOR 2)
-set(APP_VERSION_MINOR 4)
-set(APP_VERSION_PATCH 15)
+set(APP_VERSION_MINOR 7)
+set(APP_VERSION_PATCH 4)
 set(APP_VERSION "${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_VERSION_PATCH}")
 
 # Include the binary directory for the generated header file
@@ -40,9 +40,9 @@ configure_file(
 )
 
 if(LINUX)
-  find_package(Qt6 6.5 COMPONENTS Core Quick WaylandCompositor QuickDialogs2 Svg HttpServer Sql Pdf REQUIRED)
+  find_package(Qt6 6.4 COMPONENTS Core Quick WaylandCompositor QuickDialogs2 Svg HttpServer Sql Pdf REQUIRED)
 else()
-  find_package(Qt6 6.5 COMPONENTS Core Quick QuickDialogs2 Svg HttpServer Sql Pdf REQUIRED)
+  find_package(Qt6 6.4 COMPONENTS Core Quick QuickDialogs2 Svg HttpServer Sql Pdf REQUIRED)
 endif()
 
 # Get the Qt6Core target properties
@@ -68,14 +68,20 @@ if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
   set(METAL_SHADER_FILE ../gpt4all-backend/llama.cpp-mainline/ggml-metal.metal)
 endif()
 
+set(APP_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.icns")
+set_source_files_properties(${APP_ICON_FILE} PROPERTIES
+    MACOSX_PACKAGE_LOCATION "Resources")
+
 qt_add_executable(chat
     main.cpp
     chat.h chat.cpp
     chatllm.h chatllm.cpp
     chatmodel.h chatlistmodel.h chatlistmodel.cpp
-    chatgpt.h chatgpt.cpp
+    chatapi.h chatapi.cpp
     database.h database.cpp
+    embeddings.h embeddings.cpp
     download.h download.cpp
+    embllm.cpp embllm.h
     localdocs.h localdocs.cpp localdocsmodel.h localdocsmodel.cpp
     llm.h llm.cpp
     modellist.h modellist.cpp
@@ -85,14 +91,17 @@ qt_add_executable(chat
     logger.h logger.cpp
     responsetext.h responsetext.cpp
     ${METAL_SHADER_FILE}
+    ${APP_ICON_FILE}
 )
 
 qt_add_qml_module(chat
     URI gpt4all
     VERSION 1.0
+    NO_CACHEGEN
     QML_FILES
       main.qml
       qml/ChatDrawer.qml
+      qml/ChatView.qml
       qml/CollectionsDialog.qml
       qml/ModelDownloaderDialog.qml
       qml/NetworkDialog.qml
@@ -106,15 +115,22 @@ qt_add_qml_module(chat
       qml/ModelSettings.qml
       qml/ApplicationSettings.qml
       qml/LocalDocsSettings.qml
+      qml/SwitchModelDialog.qml
       qml/MySettingsTab.qml
       qml/MySettingsStack.qml
+      qml/MySettingsDestructiveButton.qml
+      qml/MySettingsButton.qml
+      qml/MySettingsLabel.qml
+      qml/MySlug.qml
       qml/MyButton.qml
       qml/MyComboBox.qml
       qml/MyDialog.qml
       qml/MyDirectoryField.qml
+      qml/MyTextArea.qml
       qml/MyTextField.qml
       qml/MyCheckBox.qml
       qml/MyBusyIndicator.qml
+      qml/MyMiniButton.qml
       qml/MyToolButton.qml
     RESOURCES
       icons/send_message.svg
@@ -125,12 +141,15 @@ qt_add_qml_module(chat
       icons/db.svg
       icons/download.svg
       icons/settings.svg
+      icons/eject.svg
       icons/edit.svg
       icons/image.svg
       icons/trash.svg
       icons/network.svg
       icons/thumbs_up.svg
       icons/thumbs_down.svg
+      icons/left_panel_closed.svg
+      icons/left_panel_open.svg
       icons/logo.svg
       icons/logo-32.png
       icons/logo-48.png
@@ -173,15 +192,18 @@ target_link_libraries(chat
     PRIVATE llmodel)
 
 set(COMPONENT_NAME_MAIN ${PROJECT_NAME})
-set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE PATH "..." FORCE)
+endif()
 
 install(TARGETS chat DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN})
 install(TARGETS llmodel DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 
 # We should probably iterate through the list of the cmake for backend, but these need to be installed
 # to the this component's dir for the finicky qt installer to work
-#install(TARGETS gptj-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-#install(TARGETS gptj-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
+install(TARGETS gptj-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
+install(TARGETS gptj-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 install(TARGETS llama-mainline-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 install(TARGETS llama-mainline-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 install(TARGETS llamamodel-mainline-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
@@ -189,30 +211,17 @@ install(TARGETS llamamodel-mainline-default DESTINATION lib COMPONENT ${COMPONEN
 if(APPLE)
 install(TARGETS llamamodel-mainline-metal DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 endif()
-install(TARGETS falcon-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS falcon-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-#install(TARGETS mpt-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-#install(TARGETS mpt-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS replit-mainline-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS replit-mainline-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-if(APPLE)
-install(TARGETS replit-mainline-metal DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-endif()
-install(TARGETS bert-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS bert-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS starcoder-avxonly DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
-install(TARGETS starcoder-default DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN})
 
 set(CPACK_GENERATOR "IFW")
 set(CPACK_VERBATIM_VARIABLES YES)
 set(CPACK_IFW_VERBOSE ON)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES Linux)
-    set(LINUXDEPLOYQT "$ENV{HOME}/dev/linuxdeployqt/build/tools/linuxdeployqt/linuxdeployqt")
+    find_program(LINUXDEPLOYQT linuxdeployqt HINTS "$ENV{HOME}/dev/linuxdeployqt/build/tools/linuxdeployqt" "$ENV{HOME}/project/linuxdeployqt/bin")
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-linux.cmake.in"
                    "${CMAKE_BINARY_DIR}/cmake/deploy-qt-linux.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-linux.cmake)
-    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.5")
+    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.6")
     set(CPACK_PACKAGE_FILE_NAME "${COMPONENT_NAME_MAIN}-installer-linux")
     set(CPACK_IFW_TARGET_DIRECTORY "@HomeDir@/${COMPONENT_NAME_MAIN}")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES Windows)
@@ -220,7 +229,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES Windows)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-windows.cmake.in"
                    "${CMAKE_BINARY_DIR}/cmake/deploy-qt-windows.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-windows.cmake)
-    set(CPACK_IFW_ROOT "C:/Qt/Tools/QtInstallerFramework/4.5")
+    set(CPACK_IFW_ROOT "C:/Qt/Tools/QtInstallerFramework/4.6")
     set(CPACK_IFW_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.ico")
     set(CPACK_PACKAGE_FILE_NAME "${COMPONENT_NAME_MAIN}-installer-win64")
     set(CPACK_IFW_TARGET_DIRECTORY "@HomeDir@\\${COMPONENT_NAME_MAIN}")
@@ -229,7 +238,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-mac.cmake.in"
                    "${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
-    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.5")
+    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.6")
     set(CPACK_IFW_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/icons/favicon.icns")
     set(CPACK_PACKAGE_FILE_NAME "${COMPONENT_NAME_MAIN}-installer-darwin")
     set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDir@/${COMPONENT_NAME_MAIN}")
@@ -259,7 +268,11 @@ set(CPACK_IFW_PACKAGE_WIZARD_SHOW_PAGE_LIST OFF)
 include(InstallRequiredSystemLibraries)
 include(CPack)
 include(CPackIFW)
-cpack_add_component(${COMPONENT_NAME_MAIN} DOWNLOADED)
+if(GPT4ALL_OFFLINE_INSTALLER)
+  cpack_add_component(${COMPONENT_NAME_MAIN})
+else()
+  cpack_add_component(${COMPONENT_NAME_MAIN} DOWNLOADED)
+endif()
 cpack_ifw_configure_component(${COMPONENT_NAME_MAIN} ESSENTIAL FORCED_INSTALLATION)
 cpack_ifw_configure_component(${COMPONENT_NAME_MAIN} VERSION ${APP_VERSION})
 cpack_ifw_configure_component(${COMPONENT_NAME_MAIN} LICENSES "MIT LICENSE" ${CPACK_RESOURCE_FILE_LICENSE})
@@ -269,7 +282,7 @@ cpack_ifw_configure_component(${COMPONENT_NAME_MAIN} REPLACES "gpt4all-chat") #W
 if (GPT4ALL_LOCALHOST)
     cpack_ifw_add_repository("GPT4AllRepository" URL "http://localhost/repository")
 elseif(GPT4ALL_OFFLINE_INSTALLER)
-    cpack_ifw_add_repository("GPT4AllRepository" URL "file://${CMAKE_BINARY_DIR}/packages")
+  add_compile_definitions(GPT4ALL_OFFLINE_INSTALLER)
 else()
   if(${CMAKE_SYSTEM_NAME} MATCHES Linux)
       cpack_ifw_add_repository("GPT4AllRepository" URL "https://gpt4all.io/installer_repos/linux/repository")

@@ -18,11 +18,9 @@ MySettingsTab {
         columns: 3
         rowSpacing: 10
         columnSpacing: 10
-        Label {
+        MySettingsLabel {
             id: themeLabel
-            text: qsTr("Theme:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
+            text: qsTr("Theme")
             Layout.row: 1
             Layout.column: 0
         }
@@ -31,12 +29,12 @@ MySettingsTab {
             Layout.row: 1
             Layout.column: 1
             Layout.columnSpan: 1
-            Layout.minimumWidth: 50
+            Layout.minimumWidth: 200
             Layout.fillWidth: false
-            model: ["Dark", "Light"]
+            model: ["Dark", "Light", "LegacyDark"]
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the color theme")
-            Accessible.description: qsTr("Use this for picking the color theme for the chat client to use")
+            Accessible.name: qsTr("Color theme")
+            Accessible.description: qsTr("Color theme for the chat client to use")
             function updateModel() {
                 themeBox.currentIndex = themeBox.indexOfValue(MySettings.chatTheme);
             }
@@ -53,11 +51,9 @@ MySettingsTab {
                 MySettings.chatTheme = themeBox.currentText
             }
         }
-        Label {
+        MySettingsLabel {
             id: fontLabel
-            text: qsTr("Font Size:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
+            text: qsTr("Font Size")
             Layout.row: 2
             Layout.column: 0
         }
@@ -70,8 +66,8 @@ MySettingsTab {
             Layout.fillWidth: false
             model: ["Small", "Medium", "Large"]
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the font size")
-            Accessible.description: qsTr("Use this for picking the font size of the chat client")
+            Accessible.name: qsTr("Font size")
+            Accessible.description: qsTr("Font size of the chat client")
             function updateModel() {
                 fontBox.currentIndex = fontBox.indexOfValue(MySettings.fontSize);
             }
@@ -88,25 +84,59 @@ MySettingsTab {
                 MySettings.fontSize = fontBox.currentText
             }
         }
-        Label {
-            id: defaultModelLabel
-            text: qsTr("Default model:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
+        MySettingsLabel {
+            id: deviceLabel
+            text: qsTr("Device")
             Layout.row: 3
             Layout.column: 0
         }
         MyComboBox {
-            id: comboBox
+            id: deviceBox
             Layout.row: 3
+            Layout.column: 1
+            Layout.columnSpan: 1
+            Layout.minimumWidth: 350
+            Layout.fillWidth: false
+            model: MySettings.deviceList
+            Accessible.role: Accessible.ComboBox
+            Accessible.name: qsTr("Device")
+            Accessible.description: qsTr("Device of the chat client")
+            function updateModel() {
+                deviceBox.currentIndex = deviceBox.indexOfValue(MySettings.device);
+            }
+            Component.onCompleted: {
+                deviceBox.updateModel()
+            }
+            Connections {
+                target: MySettings
+                function onDeviceChanged() {
+                    deviceBox.updateModel()
+                }
+                function onDeviceListChanged() {
+                    deviceBox.updateModel()
+                }
+            }
+            onActivated: {
+                MySettings.device = deviceBox.currentText
+            }
+        }
+        MySettingsLabel {
+            id: defaultModelLabel
+            text: qsTr("Default model")
+            Layout.row: 4
+            Layout.column: 0
+        }
+        MyComboBox {
+            id: comboBox
+            Layout.row: 4
             Layout.column: 1
             Layout.columnSpan: 2
             Layout.minimumWidth: 350
             Layout.fillWidth: true
             model: ModelList.userDefaultModelList
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the default model")
-            Accessible.description: qsTr("Use this for picking the default model to use; the first item is the current default model")
+            Accessible.name: qsTr("Default model")
+            Accessible.description: qsTr("Default model to use; the first item is the current default model")
             function updateModel() {
                 comboBox.currentIndex = comboBox.indexOfValue(MySettings.userDefaultModel);
             }
@@ -123,12 +153,10 @@ MySettingsTab {
                 MySettings.userDefaultModel = comboBox.currentText
             }
         }
-        Label {
+        MySettingsLabel {
             id: modelPathLabel
-            text: qsTr("Download path:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            Layout.row: 4
+            text: qsTr("Download path")
+            Layout.row: 5
             Layout.column: 0
         }
         MyDirectoryField {
@@ -136,7 +164,7 @@ MySettingsTab {
             text: MySettings.modelPath
             font.pixelSize: theme.fontSizeLarge
             implicitWidth: 300
-            Layout.row: 4
+            Layout.row: 5
             Layout.column: 1
             Layout.fillWidth: true
             ToolTip.text: qsTr("Path where model files will be downloaded to")
@@ -152,23 +180,21 @@ MySettingsTab {
                 }
             }
         }
-        MyButton {
-            Layout.row: 4
+        MySettingsButton {
+            Layout.row: 5
             Layout.column: 2
             text: qsTr("Browse")
-            Accessible.description: qsTr("Opens a folder picker dialog to choose where to save model files")
+            Accessible.description: qsTr("Choose where to save model files")
             onClicked: {
                 openFolderDialog("file://" + MySettings.modelPath, function(selectedFolder) {
                     MySettings.modelPath = selectedFolder
                 })
             }
         }
-        Label {
+        MySettingsLabel {
             id: nThreadsLabel
-            text: qsTr("CPU Threads:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            Layout.row: 5
+            text: qsTr("CPU Threads")
+            Layout.row: 6
             Layout.column: 0
         }
         MyTextField {
@@ -177,7 +203,7 @@ MySettingsTab {
             font.pixelSize: theme.fontSizeLarge
             ToolTip.text: qsTr("Amount of processing threads to use bounded by 1 and number of logical processors")
             ToolTip.visible: hovered
-            Layout.row: 5
+            Layout.row: 6
             Layout.column: 1
             validator: IntValidator {
                 bottom: 1
@@ -195,48 +221,26 @@ MySettingsTab {
             Accessible.name: nThreadsLabel.text
             Accessible.description: ToolTip.text
         }
-        Label {
-            id: saveChatsLabel
-            text: qsTr("Save chats to disk:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            Layout.row: 6
+        MySettingsLabel {
+            id: saveChatsContextLabel
+            text: qsTr("Save chats context to disk")
+            Layout.row: 7
             Layout.column: 0
         }
         MyCheckBox {
-            id: saveChatsBox
-            Layout.row: 6
+            id: saveChatsContextBox
+            Layout.row: 7
             Layout.column: 1
-            checked: MySettings.saveChats
+            checked: MySettings.saveChatsContext
             onClicked: {
-                Network.sendSaveChatsToggled(saveChatsBox.checked);
-                MySettings.saveChats = !MySettings.saveChats
+                MySettings.saveChatsContext = !MySettings.saveChatsContext
             }
             ToolTip.text: qsTr("WARNING: Saving chats to disk can be ~2GB per chat")
             ToolTip.visible: hovered
         }
-        Label {
-            id: saveChatGPTChatsLabel
-            text: qsTr("Save ChatGPT chats to disk:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            Layout.row: 7
-            Layout.column: 0
-        }
-        MyCheckBox {
-            id: saveChatGPTChatsBox
-            Layout.row: 7
-            Layout.column: 1
-            checked: MySettings.saveChatGPTChats
-            onClicked: {
-                MySettings.saveChatGPTChats = !MySettings.saveChatGPTChats
-            }
-        }
-        Label {
+        MySettingsLabel {
             id: serverChatLabel
-            text: qsTr("Enable API server:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
+            text: qsTr("Enable API server")
             Layout.row: 8
             Layout.column: 0
         }
@@ -251,13 +255,44 @@ MySettingsTab {
             ToolTip.text: qsTr("WARNING: This enables the gui to act as a local REST web server(OpenAI API compliant) for API requests and will increase your RAM usage as well")
             ToolTip.visible: hovered
         }
-        Rectangle {
+        MySettingsLabel {
+            id: serverPortLabel
+            text: qsTr("API Server Port (Requires restart):")
             Layout.row: 9
+            Layout.column: 0
+        }
+        MyTextField {
+            id: serverPortField
+            text: MySettings.networkPort
+            color: theme.textColor
+            font.pixelSize: theme.fontSizeLarge
+            ToolTip.text: qsTr("Api server port. WARNING: You need to restart the application for it to take effect")
+            ToolTip.visible: hovered
+            Layout.row: 9
+            Layout.column: 1
+            validator: IntValidator {
+                bottom: 1
+            }
+            onEditingFinished: {
+                var val = parseInt(text)
+                if (!isNaN(val)) {
+                    MySettings.networkPort = val
+                    focus = false
+                } else {
+                    text = MySettings.networkPort
+                }
+            }
+            Accessible.role: Accessible.EditableText
+            Accessible.name: serverPortField.text
+            Accessible.description: ToolTip.text
+        }
+        Rectangle {
+            Layout.row: 10
             Layout.column: 0
             Layout.columnSpan: 3
             Layout.fillWidth: true
-            height: 1
-            color: theme.tabBorder
+            height: 3
+            color: theme.accentColor
         }
     }
     advancedSettings: GridLayout {
@@ -269,14 +304,12 @@ MySettingsTab {
             Layout.column: 0
             Layout.fillWidth: true
             Layout.columnSpan: 3
-            height: 1
-            color: theme.tabBorder
+            height: 3
+            color: theme.accentColor
         }
-        Label {
+        MySettingsLabel {
             id: gpuOverrideLabel
-            text: qsTr("Force Metal (macOS+arm):")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
+            text: qsTr("Force Metal (macOS+arm)")
             Layout.row: 1
             Layout.column: 0
         }
@@ -296,7 +329,7 @@ MySettingsTab {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
                 Layout.minimumHeight: warningLabel.height
-                Label {
+                MySettingsLabel {
                     id: warningLabel
                     width: parent.width
                     color: theme.textErrorColor

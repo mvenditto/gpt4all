@@ -9,10 +9,8 @@ import download
 import network
 import mysettings
 
-Drawer {
+Rectangle {
     id: chatDrawer
-    modal: false
-    opacity: 0.9
 
     Theme {
         id: theme
@@ -21,18 +19,15 @@ Drawer {
     signal downloadClicked
     signal aboutClicked
 
-    background: Rectangle {
-        height: parent.height
-        color: theme.backgroundDarkest
-    }
+    color: theme.containerBackground
 
     Item {
         anchors.fill: parent
         anchors.margins: 10
 
         Accessible.role: Accessible.Pane
-        Accessible.name: qsTr("Drawer on the left of the application")
-        Accessible.description: qsTr("Drawer that is revealed by pressing the hamburger button")
+        Accessible.name: qsTr("Drawer")
+        Accessible.description: qsTr("Main navigation drawer")
 
         MyButton {
             id: newChat
@@ -42,13 +37,7 @@ Drawer {
             topPadding: 20
             bottomPadding: 20
             text: qsTr("\uFF0B New chat")
-            Accessible.description: qsTr("Use this to create a new chat")
-            background: Rectangle {
-                border.color: newChat.down ? theme.backgroundLightest : theme.buttonBorder
-                border.width: 2
-                radius: 10
-                color: newChat.hovered ? theme.backgroundDark : theme.backgroundDarkest
-            }
+            Accessible.description: qsTr("Create a new chat")
             onClicked: {
                 ChatListModel.addChat();
                 Network.sendNewChat(ChatListModel.count)
@@ -71,19 +60,23 @@ Drawer {
                 anchors.fill: parent
                 anchors.rightMargin: 10
                 model: ChatListModel
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn }
+                ScrollBar.vertical: ScrollBar {
+                    parent: conversationList.parent
+                    anchors.top: conversationList.top
+                    anchors.left: conversationList.right
+                    anchors.bottom: conversationList.bottom
+                }
 
                 delegate: Rectangle {
                     id: chatRectangle
                     width: conversationList.width
                     height: chatName.height
-                    opacity: 0.9
                     property bool isCurrent: ChatListModel.currentChat === ChatListModel.get(index)
                     property bool isServer: ChatListModel.get(index) && ChatListModel.get(index).isServer
                     property bool trashQuestionDisplayed: false
                     visible: !isServer || MySettings.serverChat
                     z: isCurrent ? 199 : 1
-                    color: isServer ? theme.backgroundDarkest : (index % 2 === 0 ? theme.backgroundLight : theme.backgroundLighter)
+                    color: index % 2 === 0 ? theme.darkContrast : theme.lightContrast
                     border.width: isCurrent
                     border.color: chatName.readOnly ? theme.assistantColor : theme.userColor
                     TextField {
@@ -97,7 +90,7 @@ Drawer {
                         wrapMode: Text.NoWrap
                         hoverEnabled: false // Disable hover events on the TextArea
                         selectByMouse: false // Disable text selection in the TextArea
-                        font.pixelSize: theme.fontSizeLarger
+                        font.pixelSize: theme.fontSizeLarge
                         text: readOnly ? metrics.elidedText : name
                         horizontalAlignment: TextInput.AlignLeft
                         opacity: trashQuestionDisplayed ? 0.5 : 1.0
@@ -106,7 +99,7 @@ Drawer {
                             font: chatName.font
                             text: name
                             elide: Text.ElideRight
-                            elideWidth: chatName.width - 25
+                            elideWidth: chatName.width - 40
                         }
                         background: Rectangle {
                             color: "transparent"
@@ -134,8 +127,8 @@ Drawer {
                             }
                         }
                         Accessible.role: Accessible.Button
-                        Accessible.name: qsTr("Select the current chat")
-                        Accessible.description: qsTr("Provides a button to select the current chat or edit the chat when in edit mode")
+                        Accessible.name: text
+                        Accessible.description: qsTr("Select the current chat or edit the chat when in edit mode")
                     }
                     Row {
                         id: buttons
@@ -155,8 +148,7 @@ Drawer {
                                 chatName.readOnly = false
                                 chatName.selectByMouse = true
                             }
-                            Accessible.name: qsTr("Edit the chat name")
-                            Accessible.description: qsTr("Provides a button to edit the chat name")
+                            Accessible.name: qsTr("Edit chat name")
                         }
                         MyToolButton {
                             id: trashButton
@@ -168,8 +160,7 @@ Drawer {
                                 trashQuestionDisplayed = true
                                 timer.start()
                             }
-                            Accessible.name: qsTr("Delete of the chat")
-                            Accessible.description: qsTr("Provides a button to delete the chat")
+                            Accessible.name: qsTr("Delete chat")
                         }
                     }
                     Rectangle {
@@ -207,8 +198,7 @@ Drawer {
                                     Network.sendRemoveChat()
                                 }
                                 Accessible.role: Accessible.Button
-                                Accessible.name: qsTr("Confirm delete of the chat")
-                                Accessible.description: qsTr("Provides a button to confirm delete of the chat")
+                                Accessible.name: qsTr("Confirm chat deletion")
                             }
                             Button {
                                 id: cancel
@@ -230,8 +220,7 @@ Drawer {
                                     trashQuestionDisplayed = false
                                 }
                                 Accessible.role: Accessible.Button
-                                Accessible.name: qsTr("Cancel the delete of the chat")
-                                Accessible.description: qsTr("Provides a button to cancel delete of the chat")
+                                Accessible.name: qsTr("Cancel chat deletion")
                             }
                         }
                     }
@@ -256,7 +245,7 @@ Drawer {
             anchors.bottomMargin: 10
             text: qsTr("Updates")
             font.pixelSize: theme.fontSizeLarge
-            Accessible.description: qsTr("Use this to launch an external application that will check for updates to the installer")
+            Accessible.description: qsTr("Launch an external application that will check for updates to the installer")
             onClicked: {
                 if (!LLM.checkForUpdates())
                     checkForUpdatesError.open()
@@ -270,7 +259,7 @@ Drawer {
             anchors.bottom: aboutButton.top
             anchors.bottomMargin: 10
             text: qsTr("Downloads")
-            Accessible.description: qsTr("Use this to launch a dialog to download new models")
+            Accessible.description: qsTr("Launch a dialog to download new models")
             onClicked: {
                 downloadClicked()
             }
@@ -282,7 +271,7 @@ Drawer {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             text: qsTr("About")
-            Accessible.description: qsTr("Use this to launch a dialog to show the about page")
+            Accessible.description: qsTr("Launch a dialog to show the about page")
             onClicked: {
                 aboutClicked()
             }

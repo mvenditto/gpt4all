@@ -75,7 +75,7 @@
 * resumable downloads for models
 * chat list in the drawer drop down
 * add/remove/rename chats
-* perist chats to disk and restore them with full context (WARNING: the average size of each chat on disk is ~1.5GB)
+* persist chats to disk and restore them with full context (WARNING: the average size of each chat on disk is ~1.5GB)
 * NOTE: to turn on the persistent chats feature you need to do so via the settings dialog as it is off by default
 * automatically rename chats using the AI after the first prompt/response pair
 * new usage statistics including more detailed hardware info to help debug problems on older hardware
@@ -464,6 +464,294 @@
 "
 * Lakshay Kansal (Nomic AI)
 * Adam Treat (Nomic AI)
+"
+  },
+  {
+    "version": "2.4.15",
+    "notes":
+"
+* Add Vulkan GPU backend which allows inference on AMD, Intel and NVIDIA GPUs
+* Add ability to switch font sizes
+* Various bug fixes
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+* Aaron Miller (Nomic AI)
+* Nils Sauer (Nomic AI)
+* Lakshay Kansal (Nomic AI)
+"
+  },
+  {
+    "version": "2.4.16",
+    "notes":
+"
+* Bugfix for properly falling back to CPU when GPU can't be used
+* Report the actual device we're using
+* Fix context bugs for GPU accelerated models
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+* Aaron Miller (Nomic AI)
+"
+  },
+  {
+    "version": "2.4.17",
+    "notes":
+"
+* Bugfix for properly falling back to CPU when GPU is out of memory
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+* Aaron Miller (Nomic AI)
+"
+  },
+  {
+    "version": "2.4.18",
+    "notes":
+"
+* Bugfix for devices to show up in the settings combobox on application start and not just on model load
+* Send information on requested device and actual device on model load to help assess which model/gpu/os combos are working
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+"
+  },
+  {
+    "version": "2.4.19",
+    "notes":
+"
+* Fix a crash on systems with corrupted vulkan drivers or corrupted vulkan dlls
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+"
+  },
+  {
+    "version": "2.5.0",
+    "notes":
+"
+* Major new release supports GGUF models only!
+* New models like Mistral Instruct, Replit 1.5, Rift Coder and more
+* All previous version of ggml-based models are no longer supported
+* Extensive changes to vulkan support
+* Better GPU error messages
+* Prompt processing on the GPU
+* Save chats now saves to text (less harddrive space)
+* Many more changes
+",
+    "contributors":
+"
+* Aaron Miller (Nomic AI)
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.5.1",
+    "notes":
+"
+* Accessibility fixes
+* Bugfix for crasher on Windows
+",
+    "contributors":
+"
+* Aaron Miller (Nomic AI)
+* Jared Van Bortel (Nomic AI)
+* Victor Tsaran <vtsaran@yahoo.com>
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.5.2",
+    "notes":
+"
+* Support for GGUF v3 models
+* Important fixes for AMD GPUs
+* Don't start recalculating context immediately for saved chats
+* UI fixes for chat name generation
+* UI fixes for leading whitespaces in chat generation
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.5.3",
+    "notes":
+"
+* Major feature update for localdocs!
+* Localdocs now uses an embedding model for retrieval augmented generation
+* Localdocs can now search while your collections are indexing
+* You're guaranteed to get hits from localdocs for every prompt you enter
+* Fix: AMD gpu fixes
+* Fix: Better error messages
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.5.4",
+    "notes":
+"
+* Major bugfix release with new models!
+* Model: Recently released Orca 2 model which does exceptionally well on reasoning tasks
+* Fix: System prompt was not always being honored
+* Fix: Download network retry on cloudflare errors
+",
+    "contributors":
+"
+* Adam Treat (Nomic AI)
+* Jared Van Bortel (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.6.1",
+    "notes":
+"
+* Update to newer llama.cpp
+* Implemented configurable context length
+* Bugfixes for localdocs
+* Bugfixes for serialization to disk
+* Bugfixes for AVX
+* Bugfixes for Windows builds
+* Bugfixes for context retention and clearing
+* Add a button to collections dialog
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.6.2",
+    "notes":
+"
+* Update to latest llama.cpp
+* Update to newly merged vulkan backend
+* Partial GPU offloading support
+* New localdocs speed increases and features
+* New GUI settings option for configuring how many layers to put on GPU
+* New lightmode theme, darkmode theme and legacy theme
+* Lots of UI updates and enhancements
+* Scores of bugfixes for stability and usability
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Karthik Nair
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.7.0",
+    "notes":
+"
+* Add support for twelve new model architectures
+* Including Baichuan, BLOOM, CodeShell, GPT-2, Orion, Persimmon, Phi and Phi-2, Plamo, Qwen, Qwen2, Refact, and StableLM
+* Fix for progress bar colors on legacy theme
+* Fix sizing for model download dialog elements
+* Fix dialog sizes to use more screen realestate where available
+* Fix for vram leak when model loading fails
+* Fix for making the collection dialog progress bar more readable
+* Fix for smaller minimum size for main screen
+* Fix for mistral crash
+* Fix for mistral openorca prompt template to ChatLM
+* Fix for excluding non-text documents from localdoc scanning
+* Fix for scrollbar missing on main conversation
+* Fix accessibility issues for screen readers
+* Fix for not showing the download button when not online
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.7.1",
+    "notes":
+"
+* Update to latest llama.cpp with support for Google Gemma
+* Gemma, Phi and Phi-2, Qwen2, and StableLM are now all GPU accelerated
+* Large revamp of the model loading to support explicit unload/reload
+* Bugfixes for ChatML and improved version of Mistral OpenOrca
+* We no longer load a model by default on application start
+* We no longer load a model by default on chat context switch
+* Fixes for visual artifacts in update reminder dialog
+* Blacklist Intel GPU's for now as we don't support yet
+* Fixes for binary save/restore of chat
+* Save and restore of window geometry across application starts
+",
+    "contributors":
+"
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.7.2",
+    "notes":
+"
+* New support for model search/discovery using huggingface search in downloads
+* Support for more model architectures for GPU acceleration
+* Three different crash fixes for corner case settings
+* Add a minp sampling parameter
+* Bert layoer norm epsilon value
+* Fix problem with blank lines between reply and next prompt
+",
+    "contributors":
+"
+* Christopher Barrera
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
+"
+  },
+  {
+    "version": "2.7.3",
+    "notes":
+"
+* Fix for network reachability unknown
+* Fix undefined behavior with resetContext
+* Fix ChatGPT which was broken with previous release
+* Fix for clean up of chat llm thread destruction
+* Display of model loading warnings
+* Fix for issue 2080 where the GUI appears to hang when a chat is deleted
+* Fix for issue 2077 better responsiveness of model download dialog when download is taking place
+* Fix for issue 2092 don't include models that are disabled for GUI in application default model list
+* Fix for issue 2087 where cloned modelds were lost and listed in download dialog erroneously
+* Fix for MPT models without duplicated token embd weight
+* New feature with api server port setting
+* Fix for issue 2024 where combobox for model settings uses currently used model by default
+* Clean up settings properly for removed models and don't list stale model settings in download dialog
+* Fix for issue 2105 where the cancel button was not working for discovered model downloads
+",
+    "contributors":
+"
+* Christopher Barrera
+* Daniel Alencar
+* Jared Van Bortel (Nomic AI)
+* Adam Treat (Nomic AI)
+* Community (beta testers, bug reporters, bindings authors)
 "
   }
 ]

@@ -17,9 +17,9 @@ public:
 
     bool supportsEmbedding() const override { return false; }
     bool supportsCompletion() const override { return true; }
-    bool loadModel(const std::string &modelPath) override;
+    bool loadModel(const std::string &modelPath, int n_ctx, int ngl) override;
     bool isModelLoaded() const override;
-    size_t requiredMem(const std::string &modelPath) override;
+    size_t requiredMem(const std::string &modelPath, int n_ctx, int ngl) override;
     size_t stateSize() const override;
     size_t saveState(uint8_t *dest) const override;
     size_t restoreState(const uint8_t *src) override;
@@ -30,12 +30,13 @@ private:
     GPTJPrivate *d_ptr;
 
 protected:
-    std::vector<Token> tokenize(PromptContext &, const std::string&) const override;
+    std::vector<Token> tokenize(PromptContext &ctx, const std::string &str, bool special) const override;
     Token sampleToken(PromptContext &ctx) const override;
-    std::string tokenToString(Token) const override;
+    std::string tokenToString(Token id) const override;
     bool evalTokens(PromptContext &ctx, const std::vector<int32_t> &tokens) const override;
     int32_t contextLength() const override;
-    const std::vector<Token>& endTokens() const override;
+    const std::vector<Token> &endTokens() const override;
+    bool shouldAddBOS() const override { return false; }
 };
 
 #endif // GPTJ_H

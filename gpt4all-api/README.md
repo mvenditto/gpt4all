@@ -1,4 +1,7 @@
 # GPT4All REST API
+
+NOTICE: We are considering to deprecate this API as it has become challenging to maintain and test. If you have any interest in maintaining this or would like to takeover and adopt or discuss the future of this API please speak up in the discord channel.
+
 This directory contains the source code to run and build docker images that run a FastAPI app
 for serving inference from GPT4All models. The API matches the OpenAI API spec.
 
@@ -43,7 +46,7 @@ Run
 ```bash
 docker compose up --build
 ```
-and edit files in the `api` directory. The api will hot-reload on changes.
+and edit files in the `app` directory. The api will hot-reload on changes.
 
 You can run the unit tests with
 

@@ -9,8 +9,11 @@ Item {
     property string title: ""
     property Item contentItem: null
     property Item advancedSettings: null
+    property bool showAdvancedSettingsButton: true
+    property bool showRestoreDefaultsButton: true
     property var openFolderDialog
     signal restoreDefaultsClicked
+    signal downloadClicked
 
     onContentItemChanged: function() {
         if (contentItem) {
@@ -29,13 +32,19 @@ Item {
     }
 
     ScrollView {
+        id: scrollView
         width: parent.width
         height: parent.height
-        padding: 15
-        rightPadding: 20
+        topPadding: 15
+        leftPadding: 5
         contentWidth: availableWidth
         contentHeight: innerColumn.height
-        ScrollBar.vertical.policy: ScrollBar.AlwaysOn
+        ScrollBar.vertical: ScrollBar {
+            parent: scrollView.parent
+            anchors.top: scrollView.top
+            anchors.left: scrollView.right
+            anchors.bottom: scrollView.bottom
+        }
 
         Theme {
             id: theme
@@ -61,23 +70,24 @@ Item {
             Item {
                 Layout.fillWidth: true
                 height: restoreDefaultsButton.height
-                MyButton {
+                MySettingsButton {
                     id: restoreDefaultsButton
                     anchors.left: parent.left
+                    visible: showRestoreDefaultsButton
                     width: implicitWidth
                     text: qsTr("Restore Defaults")
                     font.pixelSize: theme.fontSizeLarge
                     Accessible.role: Accessible.Button
                     Accessible.name: text
-                    Accessible.description: qsTr("Restores the settings dialog to a default state")
+                    Accessible.description: qsTr("Restores settings dialog to a default state")
                     onClicked: {
                         root.restoreDefaultsClicked();
                     }
                 }
-                MyButton {
+                MySettingsButton {
                     id: advancedSettingsButton
                     anchors.right: parent.right
-                    visible: root.advancedSettings
+                    visible: root.advancedSettings && showAdvancedSettingsButton
                     width: implicitWidth
                     text: !advancedInner.visible ? qsTr("Advanced Settings") : qsTr("Hide Advanced Settings")
                     font.pixelSize: theme.fontSizeLarge

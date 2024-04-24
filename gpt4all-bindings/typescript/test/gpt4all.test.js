@@ -7,7 +7,6 @@ const {
     listModels,
     downloadModel,
     appendBinSuffixIfMissing,
-    normalizePromptContext,
 } = require("../src/util.js");
 const {
     DEFAULT_DIRECTORY,
@@ -19,8 +18,6 @@ const {
     createPrompt,
     createCompletion,
 } = require("../src/gpt4all.js");
-const { mock } = require("node:test");
-const { mkdirp } = require("mkdirp");
 
 describe("config", () => {
     test("default paths constants are available and correct", () => {
@@ -34,6 +31,11 @@ describe("config", () => {
                 __dirname,
                 "..",
                 `runtimes/${process.platform}-${process.arch}/native`
+            ),
+            path.resolve(
+                __dirname,
+                "..",
+                `runtimes/${process.platform}/native`,
             ),
             process.cwd(),
         ];
@@ -82,7 +84,7 @@ describe("listModels", () => {
         expect(fetch).toHaveBeenCalledTimes(0);
         expect(models[0]).toEqual(fakeModel);
     });
-    
+
     it("should throw an error if neither url nor file is specified", async () => {
         await expect(listModels(null)).rejects.toThrow(
             "No model list source specified. Please specify either a url or a file."
@@ -92,7 +94,7 @@ describe("listModels", () => {
 
 describe("appendBinSuffixIfMissing", () => {
     it("should make sure the suffix is there", () => {
-        expect(appendBinSuffixIfMissing("filename")).toBe("filename.bin");
+        expect(appendBinSuffixIfMissing("filename")).toBe("filename.gguf");
         expect(appendBinSuffixIfMissing("filename.bin")).toBe("filename.bin");
     });
 });
@@ -136,10 +138,10 @@ describe("downloadModel", () => {
         mockAbortController.mockReset();
         mockFetch.mockClear();
         global.fetch.mockRestore();
-        
+
         const rootDefaultPath = path.resolve(DEFAULT_DIRECTORY),
               partialPath = path.resolve(rootDefaultPath, fakeModelName+'.part'),
-              fullPath = path.resolve(rootDefaultPath, fakeModelName+'.bin')  
+              fullPath = path.resolve(rootDefaultPath, fakeModelName+'.bin')
 
         //if tests fail, remove the created files
         // acts as cleanup if tests fail
@@ -156,11 +158,11 @@ describe("downloadModel", () => {
     test("should successfully download a model file", async () => {
         const downloadController = downloadModel(fakeModelName);
         const modelFilePath = await downloadController.promise;
-        expect(modelFilePath).toBe(path.resolve(DEFAULT_DIRECTORY, `${fakeModelName}.bin`));
+        expect(modelFilePath).toBe(path.resolve(DEFAULT_DIRECTORY, `${fakeModelName}.gguf`));
 
         expect(global.fetch).toHaveBeenCalledTimes(1);
         expect(global.fetch).toHaveBeenCalledWith(
-            "https://gpt4all.io/models/fake-model.bin",
+            "https://gpt4all.io/models/gguf/fake-model.gguf",
             {
                 signal: "signal",
                 headers: {
@@ -189,7 +191,7 @@ describe("downloadModel", () => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
         // the file should be missing
         await expect(
-            fsp.access(path.resolve(DEFAULT_DIRECTORY, `${fakeModelName}.bin`))
+            fsp.access(path.resolve(DEFAULT_DIRECTORY, `${fakeModelName}.gguf`))
         ).rejects.toThrow();
         // partial file should also be missing
         await expect(
@@ -200,47 +202,4 @@ describe("downloadModel", () => {
     // TODO
     // test("should be able to cancel and resume a download", async () => {
     // });
-});
-
-describe("normalizePromptContext", () => {
-    it("should convert a dict with camelCased keys to snake_case", () => {
-        const camelCased = {
-            topK: 20,
-            repeatLastN: 10,
-        };
-
-        const expectedSnakeCased = {
-            top_k: 20,
-            repeat_last_n: 10,
-        };
-
-        const result = normalizePromptContext(camelCased);
-        expect(result).toEqual(expectedSnakeCased);
-    });
-
-    it("should convert a mixed case dict to snake_case, last value taking precedence", () => {
-        const mixedCased = {
-            topK: 20,
-            top_k: 10,
-            repeatLastN: 10,
-        };
-
-        const expectedSnakeCased = {
-            top_k: 10,
-            repeat_last_n: 10,
-        };
-
-        const result = normalizePromptContext(mixedCased);
-        expect(result).toEqual(expectedSnakeCased);
-    });
-
-    it("should not modify already snake cased dict", () => {
-        const snakeCased = {
-            top_k: 10,
-            repeast_last_n: 10,
-        };
-
-        const result = normalizePromptContext(snakeCased);
-        expect(result).toEqual(snakeCased);
-    });
 });

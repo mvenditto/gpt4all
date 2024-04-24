@@ -5,7 +5,7 @@ The GPT4All command-line interface (CLI) is a Python script which is built on to
 package. The source code, README, and local build instructions can be found
 [here][repo-bindings-cli].
 
-[docs-bindings-python]: gpt4all_python.html
+[docs-bindings-python]: gpt4all_python.md
 [repo-bindings-python]: https://github.com/nomic-ai/gpt4all/tree/main/gpt4all-bindings/python
 [repo-bindings-cli]: https://github.com/nomic-ai/gpt4all/tree/main/gpt4all-bindings/cli
 [typer]: https://typer.tiangolo.com/
@@ -166,7 +166,7 @@ If you want to use a different model, you can do so with the `-m`/`--model` para
 model file name is provided, it will again check in `.cache/gpt4all/` and might start downloading.
 If instead given a path to an existing model, the command could for example look like this:
 ```shell
-python app.py repl --model /home/user/my-gpt4all-models/GPT4All-13B-snoozy.ggmlv3.q4_0.bin
+python app.py repl --model /home/user/my-gpt4all-models/gpt4all-13b-snoozy-q4_0.gguf
 ```
 
 When you're done and want to end a session, simply type `/exit`.

@@ -1,6 +1,8 @@
 #ifndef MYSETTINGS_H
 #define MYSETTINGS_H
 
+#include <cstdint>
+
 #include <QObject>
 #include <QMutex>
 
@@ -10,8 +12,7 @@ class MySettings : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(int threadCount READ threadCount WRITE setThreadCount NOTIFY threadCountChanged)
-    Q_PROPERTY(bool saveChats READ saveChats WRITE setSaveChats NOTIFY saveChatsChanged)
-    Q_PROPERTY(bool saveChatGPTChats READ saveChatGPTChats WRITE setSaveChatGPTChats NOTIFY saveChatGPTChatsChanged)
+    Q_PROPERTY(bool saveChatsContext READ saveChatsContext WRITE setSaveChatsContext NOTIFY saveChatsContextChanged)
     Q_PROPERTY(bool serverChat READ serverChat WRITE setServerChat NOTIFY serverChatChanged)
     Q_PROPERTY(QString modelPath READ modelPath WRITE setModelPath NOTIFY modelPathChanged)
     Q_PROPERTY(QString userDefaultModel READ userDefaultModel WRITE setUserDefaultModel NOTIFY userDefaultModelChanged)
@@ -25,6 +26,9 @@ class MySettings : public QObject
     Q_PROPERTY(QString networkAttribution READ networkAttribution WRITE setNetworkAttribution NOTIFY networkAttributionChanged)
     Q_PROPERTY(bool networkIsActive READ networkIsActive WRITE setNetworkIsActive NOTIFY networkIsActiveChanged)
     Q_PROPERTY(bool networkUsageStatsActive READ networkUsageStatsActive WRITE setNetworkUsageStatsActive NOTIFY networkUsageStatsActiveChanged)
+    Q_PROPERTY(QString device READ device WRITE setDevice NOTIFY deviceChanged)
+    Q_PROPERTY(QVector<QString> deviceList READ deviceList NOTIFY deviceListChanged)
+    Q_PROPERTY(int networkPort READ networkPort WRITE setNetworkPort NOTIFY networkPortChanged)
 
 public:
     static MySettings *globalInstance();
@@ -40,10 +44,32 @@ public:
     Q_INVOKABLE void setModelName(const ModelInfo &m, const QString &name, bool force = false);
     QString modelFilename(const ModelInfo &m) const;
     Q_INVOKABLE void setModelFilename(const ModelInfo &m, const QString &filename, bool force = false);
+
+    QString modelDescription(const ModelInfo &m) const;
+    void setModelDescription(const ModelInfo &m, const QString &d, bool force = false);
+    QString modelUrl(const ModelInfo &m) const;
+    void setModelUrl(const ModelInfo &m, const QString &u, bool force = false);
+    QString modelQuant(const ModelInfo &m) const;
+    void setModelQuant(const ModelInfo &m, const QString &q, bool force = false);
+    QString modelType(const ModelInfo &m) const;
+    void setModelType(const ModelInfo &m, const QString &t, bool force = false);
+    bool modelIsClone(const ModelInfo &m) const;
+    void setModelIsClone(const ModelInfo &m, bool b, bool force = false);
+    bool modelIsDiscovered(const ModelInfo &m) const;
+    void setModelIsDiscovered(const ModelInfo &m, bool b, bool force = false);
+    int modelLikes(const ModelInfo &m) const;
+    void setModelLikes(const ModelInfo &m, int l, bool force = false);
+    int modelDownloads(const ModelInfo &m) const;
+    void setModelDownloads(const ModelInfo &m, int d, bool force = false);
+    QDateTime modelRecency(const ModelInfo &m) const;
+    void setModelRecency(const ModelInfo &m, const QDateTime &r, bool force = false);
+
     double modelTemperature(const ModelInfo &m) const;
     Q_INVOKABLE void setModelTemperature(const ModelInfo &m, double t, bool force = false);
     double modelTopP(const ModelInfo &m) const;
     Q_INVOKABLE void setModelTopP(const ModelInfo &m, double p, bool force = false);
+    double modelMinP(const ModelInfo &m) const;
+    Q_INVOKABLE void setModelMinP(const ModelInfo &m, double p, bool force = false);
     int modelTopK(const ModelInfo &m) const;
     Q_INVOKABLE void setModelTopK(const ModelInfo &m, int k, bool force = false);
     int modelMaxLength(const ModelInfo &m) const;
@@ -58,14 +84,16 @@ public:
     Q_INVOKABLE void setModelPromptTemplate(const ModelInfo &m, const QString &t, bool force = false);
     QString modelSystemPrompt(const ModelInfo &m) const;
     Q_INVOKABLE void setModelSystemPrompt(const ModelInfo &m, const QString &p, bool force = false);
+    int modelContextLength(const ModelInfo &m) const;
+    Q_INVOKABLE void setModelContextLength(const ModelInfo &m, int s, bool force = false);
+    int modelGpuLayers(const ModelInfo &m) const;
+    Q_INVOKABLE void setModelGpuLayers(const ModelInfo &m, int s, bool force = false);
 
     // Application settings
     int threadCount() const;
     void setThreadCount(int c);
-    bool saveChats() const;
-    void setSaveChats(bool b);
-    bool saveChatGPTChats() const;
-    void setSaveChatGPTChats(bool b);
+    bool saveChatsContext() const;
+    void setSaveChatsContext(bool b);
     bool serverChat() const;
     void setServerChat(bool b);
     QString modelPath() const;
@@ -78,6 +106,12 @@ public:
     void setFontSize(const QString &u);
     bool forceMetal() const;
     void setForceMetal(bool b);
+    QString device() const;
+    void setDevice(const QString &u);
+    int32_t contextLength() const;
+    void setContextLength(int32_t value);
+    int32_t gpuLayers() const;
+    void setGpuLayers(int32_t value);
 
     // Release/Download settings
     QString lastVersionStarted() const;
@@ -98,25 +132,29 @@ public:
     void setNetworkIsActive(bool b);
     bool networkUsageStatsActive() const;
     void setNetworkUsageStatsActive(bool b);
+    int networkPort() const;
+    void setNetworkPort(int c);
 
-    QString attemptModelLoad() const;
-    void setAttemptModelLoad(const QString &modelFile);
+    QVector<QString> deviceList() const;
+    void setDeviceList(const QVector<QString> &deviceList);
 
 Q_SIGNALS:
     void nameChanged(const ModelInfo &model);
     void filenameChanged(const ModelInfo &model);
     void temperatureChanged(const ModelInfo &model);
     void topPChanged(const ModelInfo &model);
+    void minPChanged(const ModelInfo &model);
     void topKChanged(const ModelInfo &model);
     void maxLengthChanged(const ModelInfo &model);
     void promptBatchSizeChanged(const ModelInfo &model);
+    void contextLengthChanged(const ModelInfo &model);
+    void gpuLayersChanged(const ModelInfo &model);
     void repeatPenaltyChanged(const ModelInfo &model);
     void repeatPenaltyTokensChanged(const ModelInfo &model);
     void promptTemplateChanged(const ModelInfo &model);
     void systemPromptChanged(const ModelInfo &model);
     void threadCountChanged();
-    void saveChatsChanged();
-    void saveChatGPTChatsChanged();
+    void saveChatsContextChanged();
     void serverChatChanged();
     void modelPathChanged();
     void userDefaultModelChanged();
@@ -129,11 +167,15 @@ Q_SIGNALS:
     void localDocsShowReferencesChanged();
     void networkAttributionChanged();
     void networkIsActiveChanged();
+    void networkPortChanged();
     void networkUsageStatsActiveChanged();
     void attemptModelLoadChanged();
+    void deviceChanged();
+    void deviceListChanged();
 
 private:
     bool m_forceMetal;
+    QVector<QString> m_deviceList;
 
 private:
     explicit MySettings();

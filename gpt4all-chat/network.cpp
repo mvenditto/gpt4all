@@ -317,16 +317,6 @@ void Network::sendNetworkToggled(bool isActive)
     sendMixpanelEvent("network_toggled", QVector<KeyValue>{kv});
 }
 
-void Network::sendSaveChatsToggled(bool isActive)
-{
-    if (!MySettings::globalInstance()->networkUsageStatsActive())
-        return;
-    KeyValue kv;
-    kv.key = QString("isActive");
-    kv.value = QJsonValue(isActive);
-    sendMixpanelEvent("savechats_toggled", QVector<KeyValue>{kv});
-}
-
 void Network::sendNewChat(int count)
 {
     if (!MySettings::globalInstance()->networkUsageStatsActive())
@@ -393,6 +383,8 @@ void Network::sendMixpanelEvent(const QString &ev, const QVector<KeyValue> &valu
     properties.insert("name", QCoreApplication::applicationName() + " v"
         + QCoreApplication::applicationVersion());
     properties.insert("model", ChatListModel::globalInstance()->currentChat()->modelInfo().filename());
+    properties.insert("requestedDevice", MySettings::globalInstance()->device());
+    properties.insert("actualDevice", ChatListModel::globalInstance()->currentChat()->device());
 
     // Some additional startup information
     if (ev == "startup") {
@@ -470,9 +462,9 @@ void Network::handleIpifyFinished()
         qWarning() << "ERROR: ipify invalid response.";
     if (code != 200)
         qWarning() << "ERROR: ipify response != 200 code:" << code;
-    m_ipify = qPrintable(reply->readAll());
+    m_ipify = reply->readAll();
 #if defined(DEBUG)
-    printf("ipify finished %s\n", m_ipify.toLatin1().constData());
+    printf("ipify finished %s\n", qPrintable(m_ipify));
     fflush(stdout);
 #endif
     reply->deleteLater();

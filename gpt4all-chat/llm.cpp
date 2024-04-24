@@ -1,15 +1,21 @@
 #include "llm.h"
-#include "../gpt4all-backend/sysinfo.h"
 #include "../gpt4all-backend/llmodel.h"
-#include "network.h"
+#include "../gpt4all-backend/sysinfo.h"
 
 #include <QCoreApplication>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QProcess>
 #include <QResource>
 #include <QSettings>
+#include <QUrl>
+#include <QNetworkInformation>
 #include <fstream>
+
+#ifndef GPT4ALL_OFFLINE_INSTALLER
+#include "network.h"
+#endif
 
 class MyLLM: public LLM { };
 Q_GLOBAL_STATIC(MyLLM, llmInstance)
@@ -20,35 +26,14 @@ LLM *LLM::globalInstance()
 
 LLM::LLM()
     : QObject{nullptr}
-    , m_compatHardware(true)
+    , m_compatHardware(LLModel::Implementation::hasSupportedCPU())
 {
-    QString llmodelSearchPaths = QCoreApplication::applicationDirPath();
-    const QString libDir = QCoreApplication::applicationDirPath() + "/../lib/";
-    if (directoryExists(libDir))
-        llmodelSearchPaths += ";" + libDir;
-#if defined(Q_OS_MAC)
-    const QString binDir = QCoreApplication::applicationDirPath() + "/../../../";
-    if (directoryExists(binDir))
-        llmodelSearchPaths += ";" + binDir;
-    const QString frameworksDir = QCoreApplication::applicationDirPath() + "/../Frameworks/";
-    if (directoryExists(frameworksDir))
-        llmodelSearchPaths += ";" + frameworksDir;
-#endif
-    LLModel::Implementation::setImplementationsSearchPath(llmodelSearchPaths.toStdString());
-
-#if defined(__x86_64__)
-    #ifndef _MSC_VER
-        const bool minimal(__builtin_cpu_supports("avx"));
-    #else
-        int cpuInfo[4];
-        __cpuid(cpuInfo, 1);
-        const bool minimal(cpuInfo[2] & (1 << 28));
-    #endif
-#else
-    const bool minimal = true; // Don't know how to handle non-x86_64
-#endif
-
-    m_compatHardware = minimal;
+    QNetworkInformation::loadDefaultBackend();
+    auto * netinfo = QNetworkInformation::instance();
+    if (netinfo) {
+        connect(netinfo, &QNetworkInformation::reachabilityChanged,
+            this, &LLM::isNetworkOnlineChanged);
+    }
 }
 
 bool LLM::hasSettingsAccess() const
@@ -60,6 +45,10 @@ bool LLM::hasSettingsAccess() const
 
 bool LLM::checkForUpdates() const
 {
+    #ifdef GPT4ALL_OFFLINE_INSTALLER
+    #pragma message "offline installer build will not check for updates!"
+    return QDesktopServices::openUrl(QUrl("https://gpt4all.io/"));
+    #else
     Network::globalInstance()->sendCheckForUpdates();
 
 #if defined(Q_OS_LINUX)
@@ -78,9 +67,10 @@ bool LLM::checkForUpdates() const
     }
 
     return QProcess::startDetached(fileName);
+    #endif
 }
 
-bool LLM::directoryExists(const QString &path) const
+bool LLM::directoryExists(const QString &path)
 {
     const QUrl url(path);
     const QString localFilePath = url.isLocalFile() ? url.toLocalFile() : path;
@@ -88,7 +78,7 @@ bool LLM::directoryExists(const QString &path) const
     return info.exists() && info.isDir();
 }
 
-bool LLM::fileExists(const QString &path) const
+bool LLM::fileExists(const QString &path)
 {
     const QUrl url(path);
     const QString localFilePath = url.isLocalFile() ? url.toLocalFile() : path;
@@ -104,4 +94,10 @@ qint64 LLM::systemTotalRAMInGB() const
 QString LLM::systemTotalRAMInGBString() const
 {
     return QString::fromStdString(getSystemTotalRAMInGBString());
+}
+
+bool LLM::isNetworkOnline() const
+{
+    auto * netinfo = QNetworkInformation::instance();
+    return !netinfo || netinfo->reachability() == QNetworkInformation::Reachability::Online;
 }

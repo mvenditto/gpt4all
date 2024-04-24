@@ -9,31 +9,52 @@ https://docs.gpt4all.io/gpt4all_python.html
 
 ## Installation
 
+The easiest way to install the Python bindings for GPT4All is to use pip:
+
 ```
 pip install gpt4all
 ```
 
-## Local Build Instructions
+This will download the latest version of the `gpt4all` package from PyPI.
 
-**NOTE**: If you are doing this on a Windows machine, you must build the GPT4All backend using [MinGW64](https://www.mingw-w64.org/) compiler.
+## Local Build
 
-1. Setup `llmodel`
+As an alternative to downloading via pip, you may build the Python bindings from source.
 
+### Prerequisites
+
+On Windows and Linux, building GPT4All requires the complete Vulkan SDK. You may download it from here: https://vulkan.lunarg.com/sdk/home
+
+macOS users do not need Vulkan, as GPT4All will use Metal instead.
+
+### Building the python bindings
+
+1. Clone GPT4All and change directory:
 ```
-git clone --recurse-submodules git@github.com:nomic-ai/gpt4all.git
-cd gpt4all/gpt4all-backend/
-mkdir build
-cd build
-cmake ..
-cmake --build . --parallel  # optionally append: --config Release
+git clone --recurse-submodules https://github.com/nomic-ai/gpt4all.git
+cd gpt4all/gpt4all-backend
 ```
-Confirm that `libllmodel.*` exists in `gpt4all-backend/build`.
 
-2. Setup Python package
+2. Build the backend.
 
+If you are using Windows and have Visual Studio installed:
+```
+cmake -B build
+cmake --build build --parallel --config RelWithDebInfo
+```
+
+For all other platforms:
+```
+cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --parallel
+```
+
+`RelWithDebInfo` is a good default, but you can also use `Release` or `Debug` depending on the situation.
+
+2. Install the Python package:
 ```
 cd ../../gpt4all-bindings/python
-pip3 install -e .
+pip install -e .
 ```
 
 ## Usage
@@ -42,7 +63,16 @@ Test it out! In a Python script or console:
 
 ```python
 from gpt4all import GPT4All
-model = GPT4All("orca-mini-3b.ggmlv3.q4_0.bin")
+model = GPT4All("orca-mini-3b-gguf2-q4_0.gguf")
+output = model.generate("The capital of France is ", max_tokens=3)
+print(output)
+```
+
+
+GPU Usage
+```python
+from gpt4all import GPT4All
+model = GPT4All("orca-mini-3b-gguf2-q4_0.gguf", device='gpu') # device='amd', device='intel'
 output = model.generate("The capital of France is ", max_tokens=3)
 print(output)
 ```

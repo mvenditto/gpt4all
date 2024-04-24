@@ -8,6 +8,7 @@
 #include "chatllm.h"
 #include "chatmodel.h"
 #include "database.h"
+#include "localdocsmodel.h"
 
 class Chat : public QObject
 {
@@ -16,15 +17,19 @@ class Chat : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(ChatModel *chatModel READ chatModel NOTIFY chatModelChanged)
     Q_PROPERTY(bool isModelLoaded READ isModelLoaded NOTIFY isModelLoadedChanged)
+    Q_PROPERTY(float modelLoadingPercentage READ modelLoadingPercentage NOTIFY modelLoadingPercentageChanged)
     Q_PROPERTY(QString response READ response NOTIFY responseChanged)
     Q_PROPERTY(ModelInfo modelInfo READ modelInfo WRITE setModelInfo NOTIFY modelInfoChanged)
     Q_PROPERTY(bool responseInProgress READ responseInProgress NOTIFY responseInProgressChanged)
     Q_PROPERTY(bool isRecalc READ isRecalc NOTIFY recalcChanged)
     Q_PROPERTY(bool isServer READ isServer NOTIFY isServerChanged)
-    Q_PROPERTY(QString responseState READ responseState NOTIFY responseStateChanged)
+    Q_PROPERTY(ResponseState responseState READ responseState NOTIFY responseStateChanged)
     Q_PROPERTY(QList<QString> collectionList READ collectionList NOTIFY collectionListChanged)
     Q_PROPERTY(QString modelLoadingError READ modelLoadingError NOTIFY modelLoadingErrorChanged)
     Q_PROPERTY(QString tokenSpeed READ tokenSpeed NOTIFY tokenSpeedChanged);
+    Q_PROPERTY(QString device READ device NOTIFY deviceChanged);
+    Q_PROPERTY(QString fallbackReason READ fallbackReason NOTIFY fallbackReasonChanged);
+    Q_PROPERTY(LocalDocsCollectionsModel *collectionModel READ collectionModel NOTIFY collectionModelChanged)
     QML_ELEMENT
     QML_UNCREATABLE("Only creatable from c++!")
 
@@ -41,6 +46,7 @@ public:
     explicit Chat(QObject *parent = nullptr);
     explicit Chat(bool isServer, QObject *parent = nullptr);
     virtual ~Chat();
+    void destroy() { m_llmodel->destroy(); }
     void connectLLM();
 
     QString id() const { return m_id; }
@@ -52,9 +58,12 @@ public:
     }
     ChatModel *chatModel() { return m_chatModel; }
 
+    bool isNewChat() const { return m_name == tr("New Chat") && !m_chatModel->count(); }
+
     Q_INVOKABLE void reset();
     Q_INVOKABLE void processSystemPrompt();
     Q_INVOKABLE bool isModelLoaded() const;
+    Q_INVOKABLE float modelLoadingPercentage() const;
     Q_INVOKABLE void prompt(const QString &prompt);
     Q_INVOKABLE void regenerateResponse();
     Q_INVOKABLE void stopGenerating();
@@ -64,14 +73,18 @@ public:
 
     QString response() const;
     bool responseInProgress() const { return m_responseInProgress; }
-    QString responseState() const;
+    ResponseState responseState() const;
     ModelInfo modelInfo() const;
     void setModelInfo(const ModelInfo &modelInfo);
     bool isRecalc() const;
 
-    void unloadModel();
-    void reloadModel();
+    Q_INVOKABLE void unloadModel();
+    Q_INVOKABLE void reloadModel();
+    Q_INVOKABLE void forceUnloadModel();
+    Q_INVOKABLE void forceReloadModel();
+    Q_INVOKABLE void trySwitchContextOfLoadedModel();
     void unloadAndDeleteLater();
+    void markForDeletion();
 
     qint64 creationDate() const { return m_creationDate; }
     bool serialize(QDataStream &stream, int version) const;
@@ -79,6 +92,7 @@ public:
     bool isServer() const { return m_isServer; }
 
     QList<QString> collectionList() const;
+    LocalDocsCollectionsModel *collectionModel() const { return m_collectionModel; }
 
     Q_INVOKABLE bool hasCollection(const QString &collection) const;
     Q_INVOKABLE void addCollection(const QString &collection);
@@ -88,6 +102,8 @@ public:
     QString modelLoadingError() const { return m_modelLoadingError; }
 
     QString tokenSpeed() const { return m_tokenSpeed; }
+    QString device() const { return m_device; }
+    QString fallbackReason() const { return m_fallbackReason; }
 
 public Q_SLOTS:
     void serverNewPromptResponsePair(const QString &prompt);
@@ -97,6 +113,8 @@ Q_SIGNALS:
     void nameChanged();
     void chatModelChanged();
     void isModelLoadedChanged();
+    void modelLoadingPercentageChanged();
+    void modelLoadingWarning(const QString &warning);
     void responseChanged();
     void responseInProgressChanged();
     void responseStateChanged();
@@ -115,19 +133,25 @@ Q_SIGNALS:
     void isServerChanged();
     void collectionListChanged(const QList<QString> &collectionList);
     void tokenSpeedChanged();
+    void deviceChanged();
+    void fallbackReasonChanged();
+    void collectionModelChanged();
+    void trySwitchContextOfLoadedModelAttempted();
+    void trySwitchContextOfLoadedModelCompleted(bool);
 
 private Q_SLOTS:
     void handleResponseChanged(const QString &response);
-    void handleModelLoadedChanged(bool);
+    void handleModelLoadingPercentageChanged(float);
     void promptProcessing();
     void responseStopped();
     void generatedNameChanged(const QString &name);
     void handleRecalculating();
     void handleModelLoadingError(const QString &error);
     void handleTokenSpeedChanged(const QString &tokenSpeed);
+    void handleDeviceChanged(const QString &device);
+    void handleFallbackReasonChanged(const QString &device);
     void handleDatabaseResultsChanged(const QList<ResultInfo> &results);
     void handleModelInfoChanged(const ModelInfo &modelInfo);
-    void handleModelInstalled();
 
 private:
     QString m_id;
@@ -137,18 +161,20 @@ private:
     ModelInfo m_modelInfo;
     QString m_modelLoadingError;
     QString m_tokenSpeed;
+    QString m_device;
+    QString m_fallbackReason;
     QString m_response;
     QList<QString> m_collections;
     ChatModel *m_chatModel;
-    bool m_responseInProgress;
+    bool m_responseInProgress = false;
     ResponseState m_responseState;
     qint64 m_creationDate;
     ChatLLM *m_llmodel;
     QList<ResultInfo> m_databaseResults;
-    bool m_isServer;
-    bool m_shouldDeleteLater;
-    bool m_isModelLoaded;
-    bool m_shouldLoadModelWhenInstalled;
+    bool m_isServer = false;
+    bool m_shouldDeleteLater = false;
+    float m_modelLoadingPercentage = 0.0f;
+    LocalDocsCollectionsModel *m_collectionModel;
 };
 
 #endif // CHAT_H

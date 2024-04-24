@@ -1,44 +1,72 @@
-#ifndef TSFN_CONTEXT_H
-#define TSFN_CONTEXT_H
+#ifndef PREDICT_WORKER_H
+#define PREDICT_WORKER_H
 
-#include "napi.h"
+#include "llmodel.h"
 #include "llmodel_c.h"
-#include <thread>
-#include <mutex>
-#include <iostream>
+#include "napi.h"
 #include <atomic>
+#include <iostream>
 #include <memory>
-struct PromptWorkContext {
-    std::string question;
-    std::shared_ptr<llmodel_model>& inference_;
-    llmodel_prompt_context prompt_params;
-    std::string res;
+#include <mutex>
+#include <thread>
 
+struct ResponseCallbackData
+{
+    int32_t tokenId;
+    std::string token;
 };
 
-struct TsfnContext {
-public:
-  TsfnContext(Napi::Env env, const PromptWorkContext &pc);
-  std::thread nativeThread;
-  Napi::Promise::Deferred deferred_;
-  PromptWorkContext pc;
-  Napi::ThreadSafeFunction tsfn;
-
-  // Some data to pass around
-  // int ints[ARRAY_LENGTH];
-
+struct PromptCallbackData
+{
+    int32_t tokenId;
 };
 
-// The thread entry point. This takes as its arguments the specific
-// threadsafe-function context created inside the main thread.
-void threadEntry(TsfnContext*);
+struct LLModelWrapper
+{
+    LLModel *llModel = nullptr;
+    LLModel::PromptContext promptContext;
+    ~LLModelWrapper()
+    {
+        delete llModel;
+    }
+};
 
-// The thread-safe function finalizer callback. This callback executes
-// at destruction of thread-safe function, taking as arguments the finalizer
-// data and threadsafe-function context.
-void FinalizerCallback(Napi::Env, void* finalizeData, TsfnContext*);
+struct PromptWorkerConfig
+{
+    Napi::Function responseCallback;
+    bool hasResponseCallback = false;
+    Napi::Function promptCallback;
+    bool hasPromptCallback = false;
+    llmodel_model model;
+    std::mutex *mutex;
+    std::string prompt;
+    std::string promptTemplate;
+    llmodel_prompt_context context;
+    std::string result;
+    bool special = false;
+    std::string *fakeReply = nullptr;
+};
 
-bool response_callback(int32_t token_id, const char *response);
-bool recalculate_callback (bool isrecalculating);
-bool prompt_callback (int32_t tid); 
-#endif  // TSFN_CONTEXT_H
+class PromptWorker : public Napi::AsyncWorker
+{
+  public:
+    PromptWorker(Napi::Env env, PromptWorkerConfig config);
+    ~PromptWorker();
+    void Execute() override;
+    void OnOK() override;
+    void OnError(const Napi::Error &e) override;
+    Napi::Promise GetPromise();
+
+    bool ResponseCallback(int32_t token_id, const std::string token);
+    bool RecalculateCallback(bool isrecalculating);
+    bool PromptCallback(int32_t token_id);
+
+  private:
+    Napi::Promise::Deferred promise;
+    std::string result;
+    PromptWorkerConfig _config;
+    Napi::ThreadSafeFunction _responseCallbackFn;
+    Napi::ThreadSafeFunction _promptCallbackFn;
+};
+
+#endif // PREDICT_WORKER_H
