@@ -43,6 +43,7 @@ public unsafe partial struct llmodel_prompt_context
 
     public float context_erase;
 }
+
 #pragma warning disable CA2101
 internal static unsafe partial class NativeMethods
 {
@@ -97,10 +98,14 @@ internal static unsafe partial class NativeMethods
     public static extern void llmodel_prompt(
         [NativeTypeName("llmodel_model")] IntPtr model,
         [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string prompt,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string prompt_template,
         LlmodelPromptCallback prompt_callback,
         LlmodelResponseCallback response_callback,
         LlmodelRecalculateCallback recalculate_callback,
-        ref llmodel_prompt_context ctx);
+        ref llmodel_prompt_context ctx,
+        bool special,
+        [NativeTypeName("const char *")] IntPtr fake_reply
+    );
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void llmodel_setThreadCount([NativeTypeName("llmodel_model")] IntPtr model, [NativeTypeName("int32_t")] int n_threads);

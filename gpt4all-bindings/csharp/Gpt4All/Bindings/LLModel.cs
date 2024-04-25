@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Gpt4All.Bindings;
@@ -63,18 +64,21 @@ public class LLModel : ILLModel
     /// <summary>
     /// Generate a response using the model
     /// </summary>
-    /// <param name="text">The input promp</param>
+    /// <param name="prompt">The input promp</param>
     /// <param name="context">The context</param>
     /// <param name="promptCallback">A callback function for handling the processing of prompt</param>
     /// <param name="responseCallback">A callback function for handling the generated response</param>
     /// <param name="recalculateCallback">A callback function for handling recalculation requests</param>
     /// <param name="cancellationToken"></param>
     public void Prompt(
-        string text,
+        string prompt,
+        string promptTemplate,
         LLModelPromptContext context,
         Func<ModelPromptEventArgs, bool>? promptCallback = null,
         Func<ModelResponseEventArgs, bool>? responseCallback = null,
         Func<ModelRecalculatingEventArgs, bool>? recalculateCallback = null,
+        bool special = false,
+        string? fakeReply = null,
         CancellationToken cancellationToken = default)
     {
         GC.KeepAlive(promptCallback);
@@ -82,11 +86,19 @@ public class LLModel : ILLModel
         GC.KeepAlive(recalculateCallback);
         GC.KeepAlive(cancellationToken);
 
-        _logger.LogInformation("Prompt input='{Prompt}' ctx={Context}", text, context.Dump());
+        _logger.LogInformation("Prompt input='{Prompt}' special={Special} fake_reply={FakeReply} ctx={Context}",
+            prompt,
+            special,
+            fakeReply,
+            context.Dump());
+
+        // TODO: possible leak
+        var fakeReplyPtr = fakeReply == null ? IntPtr.Zero : Marshal.StringToCoTaskMemUTF8(fakeReply);
 
         NativeMethods.llmodel_prompt(
             _handle,
-            text,
+            prompt,
+            promptTemplate,
             (tokenId) =>
             {
                 if (cancellationToken.IsCancellationRequested) return false;
@@ -113,7 +125,9 @@ public class LLModel : ILLModel
                 var args = new ModelRecalculatingEventArgs(isRecalculating);
                 return recalculateCallback(args);
             },
-            ref context.UnderlyingContext
+            ref context.UnderlyingContext,
+            special: special,
+            fake_reply: fakeReplyPtr
         );
     }
 
