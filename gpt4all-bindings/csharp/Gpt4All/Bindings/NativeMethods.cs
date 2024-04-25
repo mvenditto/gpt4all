@@ -108,5 +108,13 @@ internal static unsafe partial class NativeMethods
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: NativeTypeName("int32_t")]
     public static extern int llmodel_threadCount([NativeTypeName("llmodel_model")] IntPtr model);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    public static extern void llmodel_set_implementation_search_path(
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string path
+    );
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    public static extern IntPtr llmodel_get_implementation_search_path();
 }
 #pragma warning restore CA2101
