@@ -44,6 +44,19 @@ public unsafe partial struct llmodel_prompt_context
     public float context_erase;
 }
 
+internal unsafe struct llmodel_gpu_device
+{
+    public int index;
+
+    public int type;
+
+    public nuint heapSize;
+
+    public IntPtr name;
+
+    public IntPtr vendor;
+}
+
 #pragma warning disable CA2101
 internal static unsafe partial class NativeMethods
 {
@@ -121,5 +134,8 @@ internal static unsafe partial class NativeMethods
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern IntPtr llmodel_get_implementation_search_path();
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern llmodel_gpu_device* llmodel_available_gpu_devices(nuint memoryRequired, out int num_devices);
 }
 #pragma warning restore CA2101
