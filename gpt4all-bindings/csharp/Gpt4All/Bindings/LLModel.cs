@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Gpt4All.Bindings;
@@ -78,7 +77,6 @@ public class LLModel : ILLModel
         Func<ModelResponseEventArgs, bool>? responseCallback = null,
         Func<ModelRecalculatingEventArgs, bool>? recalculateCallback = null,
         bool special = false,
-        string? fakeReply = null,
         CancellationToken cancellationToken = default)
     {
         GC.KeepAlive(promptCallback);
@@ -86,14 +84,10 @@ public class LLModel : ILLModel
         GC.KeepAlive(recalculateCallback);
         GC.KeepAlive(cancellationToken);
 
-        _logger.LogInformation("Prompt input='{Prompt}' special={Special} fake_reply={FakeReply} ctx={Context}",
+        _logger.LogInformation("Prompt input='{Prompt}' special={Special} ctx={Context}",
             prompt,
             special,
-            fakeReply,
             context.Dump());
-
-        // TODO: possible leak
-        var fakeReplyPtr = fakeReply == null ? IntPtr.Zero : Marshal.StringToCoTaskMemUTF8(fakeReply);
 
         NativeMethods.llmodel_prompt(
             _handle,
@@ -127,7 +121,7 @@ public class LLModel : ILLModel
             },
             ref context.UnderlyingContext,
             special: special,
-            fake_reply: fakeReplyPtr
+            fake_reply: IntPtr.Zero
         );
     }
 

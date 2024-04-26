@@ -23,7 +23,6 @@ public interface ILLModel : IDisposable
         Func<ModelResponseEventArgs, bool>? responseCallback = null,
         Func<ModelRecalculatingEventArgs, bool>? recalculateCallback = null,
         bool special = false,
-        string? fakeReply = null,
         CancellationToken cancellationToken = default);
 
     unsafe ulong RestoreStateData(byte* destination);

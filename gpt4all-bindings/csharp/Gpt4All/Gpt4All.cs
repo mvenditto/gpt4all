@@ -53,7 +53,7 @@ public class Gpt4All : IGpt4AllModel
                     }
                     result.Append(e.Response);
                     return true;
-                }, cancellationToken: cancellationToken);
+                }, special: opts.Special, cancellationToken: cancellationToken);
             }
             catch (Exception e)
             {
@@ -94,7 +94,7 @@ public class Gpt4All : IGpt4AllModel
                     }
                     result.Append(e.Response);
                     return true;
-                }, cancellationToken: cancellationToken);
+                }, special: opts.Special, cancellationToken: cancellationToken);
             }
             catch (Exception e)
             {
