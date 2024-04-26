@@ -11,6 +11,7 @@ namespace Gpt4All;
 public class Gpt4All : IGpt4AllModel
 {
     private readonly ILLModel _model;
+    private readonly LLModelPromptContext _context;
     private readonly ILogger _logger;
 
     private const string ResponseErrorMessage =
@@ -19,9 +20,12 @@ public class Gpt4All : IGpt4AllModel
     /// <inheritdoc/>
     public IPromptFormatter? PromptFormatter { get; set; }
 
+    public LLModelPromptContext Context => _context;
+
     internal Gpt4All(ILLModel model, ILogger? logger = null)
     {
         _model = model;
+        _context = new LLModelPromptContext();
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -38,11 +42,12 @@ public class Gpt4All : IGpt4AllModel
 
             var sw = Stopwatch.StartNew();
             var result = new TextPredictionResult();
-            var context = opts.ToPromptContext();
 
             try
             {
-                _model.Prompt(prompt, opts.PromptTemplate, context, responseCallback: e =>
+                _context.Update(opts);
+
+                _model.Prompt(prompt, opts.PromptTemplate, _context, responseCallback: e =>
                 {
                     if (e.IsError)
                     {
@@ -81,9 +86,9 @@ public class Gpt4All : IGpt4AllModel
 
             try
             {
-                var context = opts.ToPromptContext();
+                _context.Update(opts);
 
-                _model.Prompt(prompt, opts.PromptTemplate, context, responseCallback: e =>
+                _model.Prompt(prompt, opts.PromptTemplate, _context, responseCallback: e =>
                 {
                     if (e.IsError)
                     {
