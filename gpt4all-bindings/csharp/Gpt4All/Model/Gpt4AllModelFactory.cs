@@ -61,7 +61,9 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
     {
         if (!File.Exists(modelPath))
         {
-            throw new FileNotFoundException("Model file not found", modelPath);
+            throw new ModelLoadException(
+                "Model file not found",
+                innerException: new FileNotFoundException("Model file not found", modelPath));
         }
 
         _logger.LogInformation("Creating model path={ModelPath}", modelPath);
@@ -103,7 +105,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
                 _logger.LogError(ex, "Failed to dispose the model on load failure.");
             }
 
-            throw new Exception($"Failed to load model: '{modelPath}'");
+            throw new ModelLoadException($"Failed to load model: '{modelPath}'");
         }
 
         Debug.Assert(underlyingModel.IsLoaded());
