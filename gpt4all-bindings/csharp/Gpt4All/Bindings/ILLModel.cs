@@ -13,7 +13,7 @@ public interface ILLModel : IDisposable
 
     bool IsLoaded();
 
-    bool Load(string modelPath);
+    bool Load(string modelPath, int maxContextSize, int numGpuLayers);
 
     void Prompt(
         string prompt,
@@ -28,4 +28,6 @@ public interface ILLModel : IDisposable
     unsafe ulong RestoreStateData(byte* destination);
 
     unsafe ulong SaveStateData(byte* source);
+
+    nuint GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers);
 }

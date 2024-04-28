@@ -1,6 +1,6 @@
 ﻿namespace Gpt4All.Bindings;
 
-public class GpuDevice
+public record GpuDevice
 {
     public int Index { get; init; }
 

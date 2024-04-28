@@ -51,6 +51,8 @@ public class LLModel : ILLModel
         _logger = logger ?? NullLogger.Instance;
     }
 
+    internal IntPtr Handle => _handle;
+
     /// <summary>
     /// Create a new model from a pointer
     /// </summary>
@@ -58,6 +60,18 @@ public class LLModel : ILLModel
     public static LLModel Create(IntPtr handle, ILogger? logger = null)
     {
         return new LLModel(handle, logger: logger);
+    }
+
+    /// <summary>
+    /// Estimated RAM requirement for a model file
+    /// </summary>
+    /// <param name="modelPath">The path to the model file</param>
+    /// <param name="maxContextSize">Maximum size of context window</param>
+    /// <param name="numGpuLayers">Number of GPU layers to use (Vulkan)</param>
+    /// <returns>The estimated RAM requirement for a model file</returns>
+    public nuint GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers)
+    {
+        return NativeMethods.llmodel_required_mem(_handle, modelPath, maxContextSize, numGpuLayers);
     }
 
     /// <summary>
@@ -188,16 +202,19 @@ public class LLModel : ILLModel
     /// Load the model from a file.
     /// </summary>
     /// <param name="modelPath">The path to the model file.</param>
+    /// <param name="maxContextSize">Maximum size of context window</param>
+    /// <param name="numGpuLayers">Number of GPU layers to use (Vulkan)</param>
     /// <returns>true if the model was loaded successfully, false otherwise.</returns>
-    public bool Load(string modelPath)
+    public bool Load(string modelPath, int maxContextSize = 2048, int numGpuLayers = 100)
     {
-        return NativeMethods.llmodel_loadModel(_handle, modelPath, 2048, 100);
+        return NativeMethods.llmodel_loadModel(_handle, modelPath, maxContextSize, numGpuLayers);
     }
 
     protected void Destroy()
     {
         NativeMethods.llmodel_model_destroy(_handle);
     }
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;

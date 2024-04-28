@@ -82,6 +82,13 @@ internal static unsafe partial class NativeMethods
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void llmodel_model_destroy([NativeTypeName("llmodel_model")] IntPtr model);
 
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern nuint llmodel_required_mem(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string model_path,
+        [NativeTypeName("int32_t")] int n_ctx,
+        [NativeTypeName("int32_t")] int ngl);
+
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     [return: MarshalAs(UnmanagedType.I1)]
     public static extern bool llmodel_loadModel(
@@ -91,7 +98,6 @@ internal static unsafe partial class NativeMethods
         [NativeTypeName("int32_t")] int ngl);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-
     [return: MarshalAs(UnmanagedType.I1)]
     public static extern bool llmodel_isModelLoaded([NativeTypeName("llmodel_model")] IntPtr model);
 
@@ -117,8 +123,7 @@ internal static unsafe partial class NativeMethods
         LlmodelRecalculateCallback recalculate_callback,
         ref llmodel_prompt_context ctx,
         bool special,
-        [NativeTypeName("const char *")] IntPtr fake_reply
-    );
+        [NativeTypeName("const char *")] IntPtr fake_reply);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void llmodel_setThreadCount([NativeTypeName("llmodel_model")] IntPtr model, [NativeTypeName("int32_t")] int n_threads);
@@ -129,13 +134,19 @@ internal static unsafe partial class NativeMethods
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern void llmodel_set_implementation_search_path(
-        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string path
-    );
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string path);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern IntPtr llmodel_get_implementation_search_path();
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern llmodel_gpu_device* llmodel_available_gpu_devices(nuint memoryRequired, out int num_devices);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    public static extern bool llmodel_gpu_init_gpu_device_by_string(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        [NativeTypeName("size_t")] nuint memoryRequired,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string device);
 }
 #pragma warning restore CA2101
