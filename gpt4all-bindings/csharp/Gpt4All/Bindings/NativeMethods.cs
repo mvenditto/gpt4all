@@ -154,11 +154,9 @@ internal static unsafe partial class NativeMethods
     public static extern bool llmodel_has_gpu_device([NativeTypeName("llmodel_model")] IntPtr model);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
-    //[return: MarshalAs(UnmanagedType.LPStr)]
     public static extern IntPtr llmodel_model_gpu_device_name([NativeTypeName("llmodel_model")] IntPtr model);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
-    //[return: MarshalAs(UnmanagedType.LPStr)]
     public static extern IntPtr llmodel_model_backend_name([NativeTypeName("llmodel_model")] IntPtr model);
 }
 #pragma warning restore CA2101
