@@ -151,6 +151,18 @@ internal static unsafe partial class NativeMethods
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.I1)]
+    public static extern bool llmodel_gpu_init_gpu_device_by_int(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        int device_idx);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    public static extern bool llmodel_gpu_init_gpu_device_by_struct(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        llmodel_gpu_device* device);
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.I1)]
     public static extern bool llmodel_has_gpu_device([NativeTypeName("llmodel_model")] IntPtr model);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
