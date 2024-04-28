@@ -54,7 +54,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
         errMessage += $"\nAvailable GPUs: {availableGpus.Join()}";
         errMessage += $"\nUnavailable GPUs due to insufficient memory or features: {unavailableGpus.Join()}";
 
-        throw new InvalidOperationException(errMessage);
+        throw new GpuDeviceInitializationException(errMessage);
     }
 
     private Gpt4All CreateModel(string modelPath, string device, int maxContextSize, int numGpuLayers)
