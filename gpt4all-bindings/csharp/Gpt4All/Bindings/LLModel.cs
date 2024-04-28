@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Gpt4All.Bindings;
@@ -62,27 +63,13 @@ public class LLModel : ILLModel
         return new LLModel(handle, logger: logger);
     }
 
-    /// <summary>
-    /// Estimated RAM requirement for a model file
-    /// </summary>
-    /// <param name="modelPath">The path to the model file</param>
-    /// <param name="maxContextSize">Maximum size of context window</param>
-    /// <param name="numGpuLayers">Number of GPU layers to use (Vulkan)</param>
-    /// <returns>The estimated RAM requirement for a model file</returns>
+    /// <inheritdoc/>
     public nuint GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers)
     {
         return NativeMethods.llmodel_required_mem(_handle, modelPath, maxContextSize, numGpuLayers);
     }
 
-    /// <summary>
-    /// Generate a response using the model
-    /// </summary>
-    /// <param name="prompt">The input promp</param>
-    /// <param name="context">The context</param>
-    /// <param name="promptCallback">A callback function for handling the processing of prompt</param>
-    /// <param name="responseCallback">A callback function for handling the generated response</param>
-    /// <param name="recalculateCallback">A callback function for handling recalculation requests</param>
-    /// <param name="cancellationToken"></param>
+    /// <inheritdoc/>
     public void Prompt(
         string prompt,
         string promptTemplate,
@@ -139,77 +126,69 @@ public class LLModel : ILLModel
         );
     }
 
-    /// <summary>
-    ///  Set the number of threads to be used by the model.
-    /// </summary>
-    /// <param name="threadCount">The new thread count</param>
+    /// <inheritdoc/>
     public void SetThreadCount(int threadCount)
     {
         NativeMethods.llmodel_setThreadCount(_handle, threadCount);
     }
 
-    /// <summary>
-    /// Get  the number of threads used by the model.
-    /// </summary>
-    /// <returns>the number of threads used by the model</returns>
+    /// <inheritdoc/>
     public int GetThreadCount()
     {
         return NativeMethods.llmodel_threadCount(_handle);
     }
 
-    /// <summary>
-    /// Get the size of the internal state of the model.
-    /// </summary>
-    /// <remarks>
-    /// This state data is specific to the type of model you have created.
-    /// </remarks>
-    /// <returns>the size in bytes of the internal state of the model</returns>
+    /// <inheritdoc/>
     public ulong GetStateSizeBytes()
     {
         return NativeMethods.llmodel_get_state_size(_handle);
     }
 
-    /// <summary>
-    /// Saves the internal state of the model to the specified destination address.
-    /// </summary>
-    /// <param name="source">A pointer to the src</param>
-    /// <returns>The number of bytes copied</returns>
+    /// <inheritdoc/>
     public unsafe ulong SaveStateData(byte* source)
     {
         return NativeMethods.llmodel_save_state_data(_handle, source);
     }
 
-    /// <summary>
-    /// Restores the internal state of the model using data from the specified address.
-    /// </summary>
-    /// <param name="destination">A pointer to destination</param>
-    /// <returns>the number of bytes read</returns>
+    /// <inheritdoc/>
     public unsafe ulong RestoreStateData(byte* destination)
     {
         return NativeMethods.llmodel_restore_state_data(_handle, destination);
     }
 
-    /// <summary>
-    /// Check if the model is loaded.
-    /// </summary>
-    /// <returns>true if the model was loaded successfully, false otherwise.</returns>
+    /// <inheritdoc/>
     public bool IsLoaded()
     {
         return NativeMethods.llmodel_isModelLoaded(_handle);
     }
 
-    /// <summary>
-    /// Load the model from a file.
-    /// </summary>
-    /// <param name="modelPath">The path to the model file.</param>
-    /// <param name="maxContextSize">Maximum size of context window</param>
-    /// <param name="numGpuLayers">Number of GPU layers to use (Vulkan)</param>
-    /// <returns>true if the model was loaded successfully, false otherwise.</returns>
+    /// <inheritdoc/>
     public bool Load(string modelPath, int maxContextSize = 2048, int numGpuLayers = 100)
     {
         return NativeMethods.llmodel_loadModel(_handle, modelPath, maxContextSize, numGpuLayers);
     }
 
+    /// <inheritdoc/>
+    public string GetDeviceName()
+    {
+        var ptr = NativeMethods.llmodel_model_gpu_device_name(_handle);
+        return Marshal.PtrToStringAnsi(ptr) ?? string.Empty;
+    }
+
+    /// <inheritdoc/>
+    public string GetBackendName()
+    {
+        var ptr = NativeMethods.llmodel_model_backend_name(_handle);
+        return Marshal.PtrToStringAnsi(ptr) ?? string.Empty;
+    }
+
+    /// <inheritdoc/>
+    public bool HasGpuDevice()
+    {
+        return NativeMethods.llmodel_has_gpu_device(_handle);
+    }
+
+    /// <inheritdoc/>
     protected void Destroy()
     {
         NativeMethods.llmodel_model_destroy(_handle);

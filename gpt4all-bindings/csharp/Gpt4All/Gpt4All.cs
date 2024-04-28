@@ -12,6 +12,9 @@ public class Gpt4All : IGpt4AllModel
 {
     private readonly ILLModel _model;
     private readonly LLModelPromptContext _context;
+    private readonly Lazy<string> _deviceName;
+    private readonly Lazy<string> _backendName;
+    private readonly Lazy<bool> _hasGpuDevice;
     private readonly ILogger _logger;
 
     private const string ResponseErrorMessage =
@@ -26,9 +29,22 @@ public class Gpt4All : IGpt4AllModel
     {
         _model = model;
         _context = new LLModelPromptContext();
+        _deviceName = new(model.GetDeviceName);
+        _backendName = new(model.GetBackendName);
+        _hasGpuDevice = new(model.HasGpuDevice);
         _logger = logger ?? NullLogger.Instance;
     }
 
+    /// <inheritdoc/>
+    public string BackendName => _backendName.Value;
+
+    /// <inheritdoc/>
+    public string DeviceName => _deviceName.Value;
+
+    /// <inheritdoc/>
+    public bool HasGpuDevice => _hasGpuDevice.Value;
+
+    /// <inheritdoc/>
     public Task<ITextPredictionResult> GetPredictionAsync(
         string prompt,
         PredictRequestOptions opts,
@@ -73,6 +89,7 @@ public class Gpt4All : IGpt4AllModel
         }, CancellationToken.None);
     }
 
+    /// <inheritdoc/>
     public Task<ITextPredictionStreamingResult> GetStreamingPredictionAsync(string prompt, PredictRequestOptions opts, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(prompt);
