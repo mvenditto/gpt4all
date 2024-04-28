@@ -48,6 +48,7 @@ public class Gpt4All : IGpt4AllModel
     public Task<ITextPredictionResult> GetPredictionAsync(
         string prompt,
         PredictRequestOptions opts,
+        string promptTemplate = "%1",
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(prompt);
@@ -63,7 +64,15 @@ public class Gpt4All : IGpt4AllModel
             {
                 _context.Update(opts);
 
-                _model.Prompt(prompt, opts.PromptTemplate, _context, responseCallback: e =>
+                if (PromptFormatter != null)
+                {
+                    _logger.LogWarning("PromptFormatter is deprecated. Use a ChatSession with a PromptTemplate instead.");
+                }
+
+                var promptTemplate_ = PromptFormatter != null ? "%1" : promptTemplate;
+                var prompt_ = PromptFormatter != null ? PromptFormatter.FormatPrompt(prompt) : prompt;
+
+                _model.Prompt(prompt_, promptTemplate_, _context, responseCallback: e =>
                 {
                     if (e.IsError)
                     {
@@ -90,7 +99,11 @@ public class Gpt4All : IGpt4AllModel
     }
 
     /// <inheritdoc/>
-    public Task<ITextPredictionStreamingResult> GetStreamingPredictionAsync(string prompt, PredictRequestOptions opts, CancellationToken cancellationToken = default)
+    public Task<ITextPredictionStreamingResult> GetStreamingPredictionAsync(
+        string prompt,
+        PredictRequestOptions opts,
+        string promptTemplate = "%1",
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(prompt);
 
@@ -99,13 +112,22 @@ public class Gpt4All : IGpt4AllModel
         _ = Task.Run(() =>
         {
             _logger.LogInformation("Start streaming prediction task");
+
             var sw = Stopwatch.StartNew();
 
             try
             {
                 _context.Update(opts);
 
-                _model.Prompt(prompt, opts.PromptTemplate, _context, responseCallback: e =>
+                if (PromptFormatter != null)
+                {
+                    _logger.LogWarning("PromptFormatter is deprecated. Use a ChatSession with a PromptTemplate instead.");
+                }
+
+                var promptTemplate_ = PromptFormatter != null ? "%1" : promptTemplate;
+                var prompt_ = PromptFormatter != null ? PromptFormatter.FormatPrompt(prompt) : prompt;
+
+                _model.Prompt(prompt_, promptTemplate_, _context, responseCallback: e =>
                 {
                     if (e.IsError)
                     {

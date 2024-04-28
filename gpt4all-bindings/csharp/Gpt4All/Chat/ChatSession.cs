@@ -44,11 +44,38 @@ public partial class ChatSession : IChatSession
         _messages.Add(new ChatMessage(ChatRole.System, systemPrompt ?? string.Empty));
     }
 
+    private async Task IngestSystemPromptAsync(PredictRequestOptions options, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(SystemPrompt))
+        {
+            return;
+        }
+
+        await _model.GetPredictionAsync(SystemPrompt, options with
+        {
+            TokensToPredict = 0,
+            Special = true
+        },
+        promptTemplate: "%1",
+        cancellationToken: cancellationToken);
+    }
+
     public async Task<string?> GetResponseAsync(string prompt, PredictRequestOptions opts, CancellationToken cancellationToken = default)
     {
+        if (_messages.Count == 1 && _messages[0].AuthorRole == ChatRole.System) // reset
+        {
+            await IngestSystemPromptAsync(opts, cancellationToken);
+        }
+
         _messages.Add(new ChatMessage(ChatRole.User, prompt));
 
-        var result = await _model.GetPredictionAsync(prompt, opts, cancellationToken);
+        var promptTemplate = PromptTemplate.Replace("{0}", "%1").Replace("{1}", "%2");
+
+        var result = await _model.GetPredictionAsync(
+            prompt,
+            opts,
+            promptTemplate: promptTemplate,
+            cancellationToken: cancellationToken);
 
         if (result.Success)
         {
@@ -62,9 +89,20 @@ public partial class ChatSession : IChatSession
 
     public async IAsyncEnumerable<string> GetStreamingResponseAsync(string prompt, PredictRequestOptions opts, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (_messages.Count == 1 && _messages[0].AuthorRole == ChatRole.System) // reset
+        {
+            await IngestSystemPromptAsync(opts, cancellationToken);
+        }
+
         _messages.Add(new ChatMessage(ChatRole.User, prompt));
 
-        var result = await _model.GetStreamingPredictionAsync(prompt, opts, cancellationToken);
+        var promptTemplate = PromptTemplate.Replace("{0}", "%1").Replace("{1}", "%2");
+
+        var result = await _model.GetStreamingPredictionAsync(
+            prompt,
+            opts,
+            promptTemplate: promptTemplate,
+            cancellationToken: cancellationToken);
 
         var content = new StringBuilder();
 

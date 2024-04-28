@@ -30,8 +30,6 @@ public record PredictRequestOptions
 
     public bool Special { get; init; }
 
-    public string PromptTemplate { get; init; } = "### Human:\n%1\n\n### Assistant:\n";
-
     public bool ResetContext { get; init; }
 
     public static readonly PredictRequestOptions Defaults = new();

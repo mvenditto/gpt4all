@@ -45,6 +45,7 @@ public interface ILLModel : IDisposable
     /// Generate a response using the model
     /// </summary>
     /// <param name="prompt">The input promp</param>
+    /// <param name="promptTemplate">The promp template</param>
     /// <param name="context">The context</param>
     /// <param name="promptCallback">A callback function for handling the processing of prompt</param>
     /// <param name="responseCallback">A callback function for handling the generated response</param>
