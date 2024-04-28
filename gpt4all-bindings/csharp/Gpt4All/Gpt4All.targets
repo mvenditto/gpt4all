@@ -1,0 +1,12 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <NativeLibs_Windows Include="$(MSBuildThisFileDirectory)\..\runtimes\win-x64\native\*.dll" />
+    <NativeLibs_Linux Include="$(MSBuildThisFileDirectory)\..\runtimes\linux-x64\native\*.dll" />
+    <NativeLibs_Macos Include="$(MSBuildThisFileDirectory)\..\runtimes\osx\native\*.dll" />
+  </ItemGroup>
+  <Target Name="Copy" AfterTargets="Build">
+    <Copy Condition="$([MSBuild]::IsOSPlatform('Windows'))" SourceFiles="@(NativeLibs_Windows)" DestinationFolder="$(TargetDir)" />
+    <Copy Condition="$([MSBuild]::IsOSPlatform('Linux'))" SourceFiles="@(NativeLibs_Linux)" DestinationFolder="$(TargetDir)" />
+    <Copy Condition="$([MSBuild]::IsOSPlatform('OSX'))" SourceFiles="@(NativeLibs_Macos)" DestinationFolder="$(TargetDir)" />
+  </Target>
+</Project>

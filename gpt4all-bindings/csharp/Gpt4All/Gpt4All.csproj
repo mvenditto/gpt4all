@@ -6,6 +6,11 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="Gpt4All.targets" PackagePath="build/Gpt4All.targets" />
+    </ItemGroup>
+    
     <ItemGroup>
         <!-- Windows -->
         <None Include="..\runtimes\win-x64\native\*.dll" Pack="true" PackagePath="runtimes\win-x64\native\%(Filename)%(Extension)" />
