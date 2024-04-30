@@ -38,6 +38,14 @@ public record ModelPromptEventArgs(int TokenId)
 public record ModelRecalculatingEventArgs(bool IsRecalculating);
 
 /// <summary>
+/// Arguments for embedding cancellation callback
+/// </summary>
+/// <param name="NumTokensPerBatch"> The number of tokens in each batch that will be embedded</param>
+/// <param name="NumBatches">The number of batches that will be embedded</param>
+/// <param name="Backend">The backend that will be used for embedding. One of "cpu", "kompute", or "metal"</param>
+public record ModelEmbedCancellationEventArgs(uint NumTokensPerBatch, uint NumBatches, string Backend);
+
+/// <summary>
 /// Base class and universal wrapper for GPT4All language models built around llmodel C-API.
 /// </summary>
 public class LLModel : ILLModel
@@ -124,6 +132,51 @@ public class LLModel : ILLModel
             special: special,
             fake_reply: IntPtr.Zero
         );
+    }
+
+    /// <inheritdoc/>
+    public unsafe float* Embed(
+        ReadOnlyMemory<string?> texts,
+        out nuint embeddingsSize,
+        out nuint tokenCount,
+        int dimensionality = -1,
+        string? prefix = null,
+        bool atlas = false,
+        bool doMean = false,
+        Func<ModelEmbedCancellationEventArgs, bool>? cancellationCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        GC.KeepAlive(cancellationToken);
+        GC.KeepAlive(cancellationCallback);
+
+        IntPtr error;
+
+        var embeddingsPtr = NativeMethods.llmodel_embed(
+            _handle,
+            texts.ToArray(),
+            out embeddingsSize,
+            prefix,
+            dimensionality,
+            out tokenCount,
+            doMean,
+            atlas,
+            (batchSizes, nBatch, backend) =>
+            {
+                if (cancellationToken.IsCancellationRequested) return true;
+                if (cancellationCallback == null) return false;
+                var args = new ModelEmbedCancellationEventArgs(batchSizes, nBatch, backend);
+                return cancellationCallback(args);
+            },
+            out error);
+
+        if (error != IntPtr.Zero)
+        {
+            var errorMessage = Marshal.PtrToStringAnsi(error);
+            _logger.LogError("Embedding error: {Error}", errorMessage);
+            return null;
+        }
+
+        return embeddingsPtr;
     }
 
     /// <inheritdoc/>

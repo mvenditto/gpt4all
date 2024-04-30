@@ -62,6 +62,23 @@ public interface ILLModel : IDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Generate an embedding using the model
+    /// </summary>
+    /// <returns>A pointer to an array of floating point values passed to the calling method which then will
+    /// be responsible for lifetime of this memory.NULL if an error occurred.
+    /// </returns>
+    public unsafe float* Embed(
+        ReadOnlyMemory<string?> texts,
+        out nuint embeddingsSize,
+        out nuint tokenCount,
+        int dimensionality = -1,
+        string? prefix = null,
+        bool atlas = false,
+        bool doMean = false,
+        Func<ModelEmbedCancellationEventArgs, bool>? cancellationCallback = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Restores the internal state of the model using data from the specified address.
     /// </summary>
     /// <param name="destination">A pointer to destination</param>

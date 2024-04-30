@@ -72,6 +72,9 @@ internal static unsafe partial class NativeMethods
     [return: MarshalAs(UnmanagedType.I1)]
     public delegate bool LlmodelRecalculateCallback(bool isRecalculating);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate bool LlmodelEmbCancelCallback(uint batch_sizes, uint n_batch, [MarshalAs(UnmanagedType.LPUTF8Str)] string backend);
+
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     [return: NativeTypeName("llmodel_model")]
     public static extern IntPtr llmodel_model_create2(
@@ -124,6 +127,24 @@ internal static unsafe partial class NativeMethods
         ref llmodel_prompt_context ctx,
         bool special,
         [NativeTypeName("const char *")] IntPtr fake_reply);
+
+    // Returns a pointer to an array of floating point values passed to the calling method which then will be responsible for lifetime of this memory. NULL if an error occurred.
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+    public static extern float* llmodel_embed(
+        [NativeTypeName("llmodel_model")] IntPtr model,
+        [NativeTypeName("const char **")][MarshalAs(UnmanagedType.LPArray)] string?[] texts,
+        out nuint embeddings_size,
+        [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string? prefix,
+        int dimensionality,
+        out nuint token_count,
+        bool do_mean,
+        bool atlas,
+        LlmodelEmbCancelCallback cancel_cb,
+        out IntPtr error
+    );
+
+    [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void llmodel_free_embedding(float* embeddings);
 
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void llmodel_setThreadCount([NativeTypeName("llmodel_model")] IntPtr model, [NativeTypeName("int32_t")] int n_threads);
