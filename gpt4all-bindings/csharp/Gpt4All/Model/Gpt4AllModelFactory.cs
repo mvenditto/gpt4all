@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Reflection;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
@@ -19,7 +20,14 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
         return NativeLibraryLoader.LoadNativeLibrary(Gpt4AllModelFactory.libraryPath, Gpt4AllModelFactory.bypassLoading);
     }, true);
 
-    public Gpt4AllModelFactory(string? libraryPath = default, bool bypassLoading = true, ILoggerFactory? loggerFactory = null)
+    /// <summary>
+    /// Create a models factory.
+    /// </summary>
+    /// <param name="libraryPath">Set a specific path where the libllmodel library is located.</param>
+    /// <param name="bypassLoading">If true, the libllmodel library loading is left to the runtime or the user</param>
+    /// <param name="autoSetImplementatioSearchPath">if true, the impl. search path will be set where the executing assembly is located.</param>
+    /// <param name="loggerFactory">a logger factory</param>
+    public Gpt4AllModelFactory(string? libraryPath = default, bool bypassLoading = true, bool autoSetImplementatioSearchPath = false, ILoggerFactory? loggerFactory = null)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<Gpt4AllModelFactory>();
@@ -29,6 +37,29 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
         if (!libraryLoaded.Value.IsSuccess)
         {
             throw new Exception($"Failed to load native gpt4all library. Error: {libraryLoaded.Value.ErrorMessage}");
+        }
+
+        if (autoSetImplementatioSearchPath)
+        {
+            try
+            {
+                var assemblyPath = Path.GetDirectoryName(
+                    Assembly.GetExecutingAssembly().Location);
+
+                if (!string.IsNullOrEmpty(assemblyPath))
+                {
+                    Helpers.SetImplementationSearchPath(assemblyPath);
+                    _logger.LogDebug("Set implementation search path to: {ProcessPath}", assemblyPath);
+                }
+                else
+                {
+                    _logger.LogWarning("Unable to determine the assembly path. Implementation search path not set.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to set the implementation search path.");
+            }
         }
     }
 
