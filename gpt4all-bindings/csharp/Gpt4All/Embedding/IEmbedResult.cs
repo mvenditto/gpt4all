@@ -1,4 +1,6 @@
-﻿namespace Gpt4All;
+﻿using System.Buffers;
+
+namespace Gpt4All;
 
 /// <summary>
 /// Represents the result of an embedding request
@@ -6,17 +8,11 @@
 public interface IEmbedResult : IDisposable
 {
     /// <summary>
-    /// Gets the embeddings as a readonly span of floats
+    /// Return a sequence that is a view over the generated embeddings
     /// </summary>
-    ReadOnlySpan<float> AsSpan();
-
-    /// <summary>
-    /// Gets the embeddings as a readonly memory of floats
-    /// </summary>
-    ReadOnlyMemory<float> AsMemory();
-
-    /// <summary>
-    /// The number of embeddings in the result
-    /// </summary>
-    int EmbeddingSize { get; }
+    /// <remarks>
+    /// The sequence is only valid until the parent <see cref="IEmbedResult"/> is.
+    /// The sequence will contain a number of segments equal to the number of texts passed as input to the embedding request.
+    /// </remarks>
+    ReadOnlySequence<float> GetEmbeddingsSequence();
 }

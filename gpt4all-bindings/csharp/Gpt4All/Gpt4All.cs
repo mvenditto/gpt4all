@@ -8,14 +8,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Gpt4All;
 
-public class Gpt4All : IGpt4AllModel
+public class Gpt4All : Gpt4AllModelBase, IGpt4AllModel
 {
-    private readonly ILLModel _model;
     private readonly LLModelPromptContext _context;
-    private readonly Lazy<string> _deviceName;
-    private readonly Lazy<string> _backendName;
-    private readonly Lazy<bool> _hasGpuDevice;
-    private readonly ILogger _logger;
+    private readonly ILogger<Gpt4All> _logger;
 
     private const string ResponseErrorMessage =
         "The model reported an error during token generation error={ResponseError}";
@@ -25,24 +21,11 @@ public class Gpt4All : IGpt4AllModel
 
     public LLModelPromptContext Context => _context;
 
-    internal Gpt4All(ILLModel model, ILogger? logger = null)
+    internal Gpt4All(ILLModel model, ILogger<Gpt4All>? logger = null) : base(model, logger)
     {
-        _model = model;
         _context = new LLModelPromptContext();
-        _deviceName = new(model.GetDeviceName);
-        _backendName = new(model.GetBackendName);
-        _hasGpuDevice = new(model.HasGpuDevice);
-        _logger = logger ?? NullLogger.Instance;
+        _logger = logger ?? NullLogger<Gpt4All>.Instance;
     }
-
-    /// <inheritdoc/>
-    public string BackendName => _backendName.Value;
-
-    /// <inheritdoc/>
-    public string DeviceName => _deviceName.Value;
-
-    /// <inheritdoc/>
-    public bool HasGpuDevice => _hasGpuDevice.Value;
 
     /// <inheritdoc/>
     public Task<ITextPredictionResult> GetPredictionAsync(
@@ -154,19 +137,5 @@ public class Gpt4All : IGpt4AllModel
         }, CancellationToken.None);
 
         return Task.FromResult((ITextPredictionStreamingResult)result);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _model.Dispose();
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }

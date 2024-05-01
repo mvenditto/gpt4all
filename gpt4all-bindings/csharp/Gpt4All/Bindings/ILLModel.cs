@@ -68,7 +68,7 @@ public interface ILLModel : IDisposable
     /// be responsible for lifetime of this memory.NULL if an error occurred.
     /// </returns>
     public unsafe float* Embed(
-        ReadOnlyMemory<string?> texts,
+        string[] texts,
         out nuint embeddingsSize,
         out nuint tokenCount,
         int dimensionality = -1,

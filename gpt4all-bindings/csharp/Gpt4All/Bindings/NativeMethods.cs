@@ -128,11 +128,11 @@ internal static unsafe partial class NativeMethods
         bool special,
         [NativeTypeName("const char *")] IntPtr fake_reply);
 
-    // Returns a pointer to an array of floating point values passed to the calling method which then will be responsible for lifetime of this memory. NULL if an error occurred.
+    // Maybe other overloads could be added to avoid a copy of the 'texts' parameter
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern float* llmodel_embed(
         [NativeTypeName("llmodel_model")] IntPtr model,
-        [NativeTypeName("const char **")][MarshalAs(UnmanagedType.LPArray)] string?[] texts,
+        [NativeTypeName("const char **")]/*[MarshalAs(UnmanagedType.LPArray)]*/ IntPtr* texts,
         out nuint embeddings_size,
         [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string? prefix,
         int dimensionality,

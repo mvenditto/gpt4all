@@ -88,7 +88,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
         throw new GpuDeviceInitializationException(errMessage);
     }
 
-    private Gpt4All CreateModel(string modelPath, string device, int maxContextSize, int numGpuLayers)
+    private LLModel CreateModel(string modelPath, string device, int maxContextSize = 2048, int numGpuLayers = 100)
     {
         if (!File.Exists(modelPath))
         {
@@ -105,7 +105,7 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
 
         if (error != IntPtr.Zero)
         {
-            throw new Exception(Marshal.PtrToStringAnsi(error));
+            throw new ModelCreationException(Marshal.PtrToStringAnsi(error));
         }
 
         var logger = _loggerFactory.CreateLogger<LLModel>();
@@ -141,9 +141,24 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
 
         Debug.Assert(underlyingModel.IsLoaded());
 
+        return underlyingModel;
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ModelCreationException"></exception>
+    /// <exception cref="ModelLoadException"></exception>
+    /// <exception cref="GpuDeviceInitializationException"></exception>
+    public IGpt4AllModel LoadModel(string modelPath, string device = "cpu", int maxContextSize = 2048, int numGpuLayers = 100)
+    {
+        var underlyingModel = CreateModel(modelPath, device, maxContextSize, numGpuLayers);
+        var logger = _loggerFactory.CreateLogger<Gpt4All>();
         return new Gpt4All(underlyingModel, logger: logger);
     }
 
-    public IGpt4AllModel LoadModel(string modelPath, string device = "cpu", int maxContextSize = 2048, int numGpuLayers = 100) =>
-            CreateModel(modelPath, device, maxContextSize, numGpuLayers);
+    public IGpt4AllEmbeddingModel LoadEmbeddingModel(string modelPath, string device = "cpu")
+    {
+        var underlyingModel = CreateModel(modelPath, device);
+        var logger = _loggerFactory.CreateLogger<Embed4All>();
+        return new Embed4All(underlyingModel, logger: logger);
+    }
 }

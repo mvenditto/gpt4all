@@ -135,8 +135,10 @@ public class LLModel : ILLModel
     }
 
     /// <inheritdoc/>
+    /// <exception cref="EmbeddingsGenerationException"></exception>
+    /// <exception cref="OperationCanceledException"></exception>
     public unsafe float* Embed(
-        ReadOnlyMemory<string?> texts,
+        string[] texts,
         out nuint embeddingsSize,
         out nuint tokenCount,
         int dimensionality = -1,
@@ -149,34 +151,78 @@ public class LLModel : ILLModel
         GC.KeepAlive(cancellationToken);
         GC.KeepAlive(cancellationCallback);
 
-        IntPtr error;
+        var canceled = false;
 
-        var embeddingsPtr = NativeMethods.llmodel_embed(
-            _handle,
-            texts.ToArray(),
-            out embeddingsSize,
-            prefix,
-            dimensionality,
-            out tokenCount,
-            doMean,
-            atlas,
-            (batchSizes, nBatch, backend) =>
-            {
-                if (cancellationToken.IsCancellationRequested) return true;
-                if (cancellationCallback == null) return false;
-                var args = new ModelEmbedCancellationEventArgs(batchSizes, nBatch, backend);
-                return cancellationCallback(args);
-            },
-            out error);
+        // manually marshal the null-terminated strings array
+        // NativeMethods.llmodel_embed 'texts' parameter type could also be changed to
+        // string[], but in that case, there would be the necessity to add a NULL string a the end.
+        // to avoid to copy the string array passed by the user (or to bother the user adding a NULL string at the end),
+        // we can marshal the string array manually.
+        // writing a custom null-terminated string[] marshall could also be done.
+        var ptrTexts = (IntPtr*)IntPtr.Zero;
 
-        if (error != IntPtr.Zero)
+        try
         {
-            var errorMessage = Marshal.PtrToStringAnsi(error);
-            _logger.LogError("Embedding error: {Error}", errorMessage);
-            return null;
-        }
+            ptrTexts = (IntPtr*)NativeMemory.Alloc((nuint)(sizeof(IntPtr) * (texts.Length + 1))); // +1 for null terminator
 
-        return embeddingsPtr;
+            ptrTexts[texts.Length] = IntPtr.Zero;
+
+            for (var i = 0; i < texts.Length; i++)
+            {
+                ptrTexts[i] = Marshal.StringToHGlobalAnsi(texts[i]);
+            }
+
+            var embeddingsPtr = NativeMethods.llmodel_embed(
+                _handle,
+                ptrTexts,
+                out embeddingsSize,
+                prefix,
+                dimensionality,
+                out tokenCount,
+                doMean,
+                atlas,
+                (batchSizes, nBatch, backend) =>
+                {
+                    if (cancellationToken.IsCancellationRequested) return true;
+                    if (cancellationCallback == null) return false;
+                    var args = new ModelEmbedCancellationEventArgs(batchSizes, nBatch, backend);
+                    canceled = cancellationCallback(args);
+                    return canceled;
+                },
+                out var error);
+
+            if (canceled || cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Embeddings generation was canceled");
+            }
+
+            if (embeddingsPtr == null)
+            {
+                var errorMessage = error != IntPtr.Zero
+                    ? Marshal.PtrToStringAnsi(error)
+                    : "Unknown error";
+
+                throw new EmbeddingsGenerationException($"Failed to generate embeddings: {errorMessage}");
+            }
+
+            return embeddingsPtr;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Embedding generation failed.");
+            throw new EmbeddingsGenerationException("Embedding generation failed.", ex);
+        }
+        finally
+        {
+            if (ptrTexts != (IntPtr*)IntPtr.Zero)
+            {
+                for (var i = 0; i < texts.Length; i++)
+                {
+                    Marshal.FreeHGlobal(ptrTexts[i]);
+                }
+                NativeMemory.Free(ptrTexts);
+            }
+        }
     }
 
     /// <inheritdoc/>
