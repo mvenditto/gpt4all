@@ -1,21 +1,6 @@
 ﻿namespace Gpt4All;
 
 /// <summary>
-/// Modes to instruct the model how to handle texts longer than it can accept
-/// </summary>
-public enum LongTextMode
-{
-    /// <summary>
-    /// Average multiple embeddings
-    /// </summary>
-    Mean = 1,
-    /// <summary>
-    /// Truncate
-    /// </summary>
-    Truncate = 2
-}
-
-/// <summary>
 /// Parameters for embedding requests
 /// </summary>
 public record EmbedRequestOptions
@@ -23,6 +8,12 @@ public record EmbedRequestOptions
     /// <summary>
     /// The model-specific prefix representing the embedding task, without the trailing colon. NULL for no prefix
     /// </summary>
+    /// <remarks>
+    /// The model-specific prefix representing the embedding task, without the trailing colon. For Nomic
+    /// Embed, this can be `search_query`, `search_document`, `classification`, or `clustering`. Defaults to
+    /// `search_document` or equivalent if known; otherwise, you must explicitly pass a prefix or an empty
+    /// string if none applies.
+    /// </remarks>
     public string? Prefix { get; init; }
 
     /// <summary>
