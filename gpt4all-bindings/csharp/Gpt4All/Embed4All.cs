@@ -41,6 +41,8 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
                 MinDimensionality);
         }
 
+        var mean = opts.LongTextMode == LongTextMode.Mean;
+
         return Task.Run(() =>
         {
             unsafe
@@ -52,7 +54,7 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
                     dimensionality: dimensionality,
                     prefix: opts.Prefix,
                     atlas: opts.EnforceAtlasApiCompatibility,
-                    doMean: opts.DoMean,
+                    doMean: mean,
                     cancellationCallback: null,
                     cancellationToken: cancellationToken
                 );

@@ -1,6 +1,21 @@
 ﻿namespace Gpt4All;
 
 /// <summary>
+/// Modes to instruct the model how to handle texts longer than it can accept
+/// </summary>
+public enum LongTextMode
+{
+    /// <summary>
+    /// Average multiple embeddings
+    /// </summary>
+    Mean = 1,
+    /// <summary>
+    /// Truncate
+    /// </summary>
+    Truncate = 2
+}
+
+/// <summary>
 /// Parameters for embedding requests
 /// </summary>
 public record EmbedRequestOptions
@@ -16,9 +31,9 @@ public record EmbedRequestOptions
     public int? Dimensionality { get; init; }
 
     /// <summary>
-    /// True to average multiple embeddings if the text is longer than the model can accept, False to truncate
+    /// How to handle texts longer than the model can accept
     /// </summary>
-    public bool DoMean { get; init; }
+    public LongTextMode LongTextMode { get; init; } = LongTextMode.Truncate;
 
     /// <summary>
     /// Try to be fully compatible with the Atlas API
