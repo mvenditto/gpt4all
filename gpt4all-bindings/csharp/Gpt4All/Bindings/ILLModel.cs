@@ -64,13 +64,20 @@ public interface ILLModel : IDisposable
     /// <summary>
     /// Generate an embedding using the model
     /// </summary>
+    /// <param name="texts">of strings representing the texts to generate an embedding for</param>
+    /// <param name="embeddingsSize">The length of the returned floating point array</param>
+    /// <param name="tokenCount">location for the number of prompt tokens processed, or NULL</param>
+    /// <param name="dimensionality">The embedding dimension, for use with Matryoshka-capable models. Set to -1 to for full-size</param>
+    /// <param name="prefix">The model-specific prefix representing the embedding task, without the trailing colon. NULL for no prefix</param>
+    /// <param name="doMean">True to average multiple embeddings if the text is longer than the model can accept, False to truncate</param>
+    /// <param name="atlas">Try to be fully compatible with the Atlas API</param>
     /// <returns>A pointer to an array of floating point values passed to the calling method which then will
     /// be responsible for lifetime of this memory.NULL if an error occurred.
     /// </returns>
     public unsafe float* Embed(
         string[] texts,
         out nuint embeddingsSize,
-        out nuint tokenCount,
+        out nuint? tokenCount,
         int dimensionality = -1,
         string? prefix = null,
         bool atlas = false,
@@ -98,8 +105,8 @@ public interface ILLModel : IDisposable
     /// <param name="modelPath">The path to the model file</param>
     /// <param name="maxContextSize">Maximum size of context window</param>
     /// <param name="numGpuLayers">Number of GPU layers to use (Vulkan)</param>
-    /// <returns>The estimated RAM requirement for a model file</returns>
-    nuint GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers);
+    /// <returns>The estimated RAM requirement for a model file or NULL if failed to retrieve.</returns>
+    nuint? GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers);
 
     /// <summary>
     /// Get the name of the backend used by the model

@@ -15,4 +15,9 @@ public interface IEmbedResult : IDisposable
     /// The sequence will contain a number of segments equal to the number of texts passed as input to the embedding request.
     /// </remarks>
     ReadOnlySequence<float> GetEmbeddingsSequence();
+
+    /// <summary>
+    /// The number of prompt tokens processed or null
+    /// </summary>
+    public int? TokenCount { get; }
 }

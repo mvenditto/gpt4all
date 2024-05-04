@@ -67,7 +67,14 @@ public class Gpt4AllModelFactory : IGpt4AllModelFactory
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var requiredMemory = model.GetRequiredMemory(modelPath, maxContextSize, numGpuLayers);
+        var maybeRequiredMemory = model.GetRequiredMemory(modelPath, maxContextSize, numGpuLayers);
+
+        if (!maybeRequiredMemory.HasValue)
+        {
+            _logger.LogWarning("Unable to retrieve required memory for model at: {ModelPath}", modelPath);
+        }
+
+        var requiredMemory = maybeRequiredMemory ?? 0;
 
         _logger.LogDebug("Initializing GPU device device={Device} requiredMemory={RequiredMemory}", device, requiredMemory);
 

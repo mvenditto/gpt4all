@@ -7,15 +7,20 @@ public record EmbedResult : IEmbedResult
     private readonly IMemoryOwner<float> _memoryManager;
     private readonly int _embeddingSize;
     private readonly int _numSegments;
+    private readonly int? _promptTokenCount;
     private bool _disposed;
+
+    public int? TokenCount => _promptTokenCount;
 
     internal unsafe EmbedResult(
         float* embeddingsPtr,
         int numSegments,
-        int embeddingSize)
+        int embeddingSize,
+        int? tokenCount)
     {
         _numSegments = numSegments;
         _embeddingSize = embeddingSize;
+        _promptTokenCount = tokenCount;
         _memoryManager = new EmbeddingsMemoryManager(embeddingsPtr, embeddingSize);
     }
 

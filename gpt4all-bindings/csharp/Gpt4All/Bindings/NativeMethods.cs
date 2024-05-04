@@ -132,7 +132,7 @@ internal static unsafe partial class NativeMethods
     [DllImport("libllmodel", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     public static extern float* llmodel_embed(
         [NativeTypeName("llmodel_model")] IntPtr model,
-        [NativeTypeName("const char **")]/*[MarshalAs(UnmanagedType.LPArray)]*/ IntPtr* texts,
+        [NativeTypeName("const char **")] IntPtr* texts, // A pointer to a NULL-terminated array of strings
         out nuint embeddings_size,
         [NativeTypeName("const char *")][MarshalAs(UnmanagedType.LPUTF8Str)] string? prefix,
         int dimensionality,

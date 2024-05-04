@@ -72,9 +72,10 @@ public class LLModel : ILLModel
     }
 
     /// <inheritdoc/>
-    public nuint GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers)
+    public nuint? GetRequiredMemory(string modelPath, int maxContextSize, int numGpuLayers)
     {
-        return NativeMethods.llmodel_required_mem(_handle, modelPath, maxContextSize, numGpuLayers);
+        var requiredMemory = NativeMethods.llmodel_required_mem(_handle, modelPath, maxContextSize, numGpuLayers);
+        return requiredMemory == 0 ? null : requiredMemory;
     }
 
     /// <inheritdoc/>
@@ -140,7 +141,7 @@ public class LLModel : ILLModel
     public unsafe float* Embed(
         string[] texts,
         out nuint embeddingsSize,
-        out nuint tokenCount,
+        out nuint? tokenCount,
         int dimensionality = -1,
         string? prefix = null,
         bool atlas = false,
@@ -152,6 +153,7 @@ public class LLModel : ILLModel
         GC.KeepAlive(cancellationCallback);
 
         var canceled = false;
+        var tokenCount_ = (nuint)0;
 
         // manually marshal the null-terminated strings array
         // NativeMethods.llmodel_embed 'texts' parameter type could also be changed to
@@ -178,7 +180,7 @@ public class LLModel : ILLModel
                 out embeddingsSize,
                 prefix,
                 dimensionality,
-                out tokenCount,
+                out tokenCount_,
                 doMean,
                 atlas,
                 (batchSizes, nBatch, backend) =>
@@ -204,6 +206,8 @@ public class LLModel : ILLModel
 
                 throw new EmbeddingsGenerationException($"Failed to generate embeddings: {errorMessage}");
             }
+
+            tokenCount = tokenCount_ == 0 ? null : tokenCount_;
 
             return embeddingsPtr;
         }

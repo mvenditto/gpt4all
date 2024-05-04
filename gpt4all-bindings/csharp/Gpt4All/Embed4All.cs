@@ -40,7 +40,8 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
                 var result = new EmbedResult(
                     embeddingsPtr: embeddingsPtr,
                     numSegments: texts.Length,
-                    embeddingSize: (int)totalValues);
+                    embeddingSize: (int)totalValues,
+                    tokenCount: (int?)tokenCount);
 
                 return (IEmbedResult)result;
             }
