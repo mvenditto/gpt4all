@@ -11,9 +11,9 @@ public record EmbedRequestOptions
     public string? Prefix { get; init; }
 
     /// <summary>
-    /// The embedding dimension, for use with Matryoshka-capable models. Set to -1 to for full-size
+    /// The embedding dimension, for use with Matryoshka-capable models. Set to null for full-size
     /// </summary>
-    public int Dimensionality { get; init; } = -1;
+    public int? Dimensionality { get; init; }
 
     /// <summary>
     /// True to average multiple embeddings if the text is longer than the model can accept, False to truncate

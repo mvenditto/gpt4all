@@ -8,6 +8,8 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
 {
     private readonly ILogger<Embed4All> _logger;
 
+    private const int MinDimensionality = 64;
+
     public Embed4All(ILLModel model, ILogger<Embed4All>? logger = null) : base(model, logger)
     {
         _logger = logger ?? NullLogger<Embed4All>.Instance;
@@ -21,6 +23,24 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
         EmbedRequestOptions opts,
         CancellationToken cancellationToken = default)
     {
+        var dimensionality = opts.Dimensionality ?? -1;
+
+        if (opts.Dimensionality.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(
+                dimensionality, 0,
+                nameof(opts.Dimensionality));
+        }
+
+        if (dimensionality < MinDimensionality)
+        {
+            _logger.LogWarning(
+                "Dimensionality {Dimensionality} is less than the suggested minimum of {MinDimensionality},"
+                + "Performance may be degraded.",
+                dimensionality,
+                MinDimensionality);
+        }
+
         return Task.Run(() =>
         {
             unsafe
@@ -29,7 +49,7 @@ public class Embed4All : Gpt4AllModelBase, IGpt4AllEmbeddingModel
                     texts,
                     out var totalValues,
                     out var tokenCount,
-                    dimensionality: opts.Dimensionality,
+                    dimensionality: dimensionality,
                     prefix: opts.Prefix,
                     atlas: opts.EnforceAtlasApiCompatibility,
                     doMean: opts.DoMean,
